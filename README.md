@@ -1,7 +1,5 @@
 # PocketGraph
 
-[![Integration Tests](https://github.com/kl0070/xamarin-neo4j/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/kl0070/xamarin-neo4j/actions/workflows/integration-tests.yml)
-
 A mobile Neo4j and Memgraph client for iOS, built with .NET MAUI.
 
 [![Download on the App Store](https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1280278400)](https://apps.apple.com/nl/app/pocketgraph/id1604368926)
@@ -64,7 +62,7 @@ PocketGraph does not collect any user data. All connections and queries are stor
 
 ## About
 
-PocketGraph is a product of [Re: Software](https://resoftware.nl).
+PocketGraph is a product of [Re: Software B.V.](https://resoftware.nl).
 
 Neo4j and Cypher are registered trademarks of Neo4j, Inc.
 

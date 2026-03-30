@@ -12,6 +12,10 @@ on:
       - "Xamarin.Neo4j/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -27,8 +31,16 @@ jobs:
 
       - name: Unit Tests
         working-directory: Xamarin.Neo4j/Xamarin.Neo4j/Xamarin.Neo4j.Tests
-        run: dotnet test --verbosity normal
+        run: dotnet test --verbosity normal --logger "trx;LogFileName=unit-tests.trx" --results-directory ../../../TestResults
 
       - name: Integration Tests
         working-directory: Xamarin.Neo4j/Xamarin.Neo4j/Xamarin.Neo4j.IntegrationTests
-        run: dotnet test --verbosity normal
+        run: dotnet test --verbosity normal --logger "trx;LogFileName=integration-tests.trx" --results-directory ../../../TestResults
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: TestResults/*.trx
+          reporter: dotnet-trx

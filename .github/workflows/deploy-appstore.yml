@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-16
+    runs-on: macos-15
 
     steps:
       - name: Checkout
@@ -15,12 +15,15 @@ jobs:
 
       - name: Select Xcode
         run: |
+          echo "Available Xcode versions:"
+          ls -d /Applications/Xcode*.app
           XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE" ]; then
             XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           fi
-          echo "Using $XCODE"
+          echo "Using: $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

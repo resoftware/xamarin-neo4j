@@ -1,0 +1,34 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Xamarin.Neo4j/**"
+      - ".github/workflows/integration-tests.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "Xamarin.Neo4j/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Unit Tests
+        working-directory: Xamarin.Neo4j/Xamarin.Neo4j/Xamarin.Neo4j.Tests
+        run: dotnet test --verbosity normal
+
+      - name: Integration Tests
+        working-directory: Xamarin.Neo4j/Xamarin.Neo4j/Xamarin.Neo4j.IntegrationTests
+        run: dotnet test --verbosity normal

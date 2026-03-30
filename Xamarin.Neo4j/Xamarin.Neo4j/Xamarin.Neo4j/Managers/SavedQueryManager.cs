@@ -9,9 +9,8 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.Maui.Storage;
 using Newtonsoft.Json;
-using Xamarin.Essentials;
 using Xamarin.Neo4j.Models;
 
 namespace Xamarin.Neo4j.Managers
@@ -22,7 +21,7 @@ namespace Xamarin.Neo4j.Managers
 
         public static List<Query> GetSavedQueries()
         {
-            var json = Preferences.Get(SavedQueriesKey, null);
+            var json = Preferences.Default.Get(SavedQueriesKey, (string)null);
 
             if (string.IsNullOrEmpty(json))
                 return new List<Query>();
@@ -43,7 +42,7 @@ namespace Xamarin.Neo4j.Managers
         {
             var json = JsonConvert.SerializeObject(savedQueries);
 
-            Preferences.Set(SavedQueriesKey, json);
+            Preferences.Default.Set(SavedQueriesKey, json);
         }
 
         public static void DeleteSavedQuery(Query query)

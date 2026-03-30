@@ -11,13 +11,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using Acr.UserDialogs;
-using Xamarin.Forms;
-using Xamarin.Forms.Internals;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
 using Xamarin.Neo4j.Annotations;
 using Xamarin.Neo4j.Models;
 using Xamarin.Neo4j.Pages;
@@ -30,6 +28,8 @@ namespace Xamarin.Neo4j.ViewModels
     public class SessionViewModel : ViewModelBase, INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
+
+        public event EventHandler ScrollToTop;
 
         private readonly Neo4jService _neo4jService;
 
@@ -49,11 +49,12 @@ namespace Xamarin.Neo4j.ViewModels
         {
             _connectionString = connectionString;
 
-            _neo4jService = DependencyService.Resolve<Neo4jService>();
-            _screenSizeService = DependencyService.Resolve<IScreenSizeService>();
+            _neo4jService = IPlatformApplication.Current.Services.GetRequiredService<Neo4jService>();
+            _screenSizeService = IPlatformApplication.Current.Services.GetRequiredService<IScreenSizeService>();
 
             Query = initialQuery;
             QueryResults = new ObservableCollection<QueryResult>();
+            QueryResults.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
 
             Commands.Add("ExecuteQuery", new Command(async () =>
             {
@@ -68,11 +69,11 @@ namespace Xamarin.Neo4j.ViewModels
                 {
                     QueryResults.Insert(0, result);
 
-                    MessagingCenter.Send(this, "ResetScroll");
+                    ScrollToTop?.Invoke(this, EventArgs.Empty);
                 }
 
                 else
-                    await UserDialogs.Instance.AlertAsync(result.ErrorMessage);
+                    await Application.Current.MainPage.DisplayAlert("", result.ErrorMessage, "OK");
             }));
 
             InitializeConnection(connectionString);
@@ -84,25 +85,25 @@ namespace Xamarin.Neo4j.ViewModels
 
             if (!isConnected)
             {
-                await UserDialogs.Instance.AlertAsync(message);
-                
+                await Application.Current.MainPage.DisplayAlert("", message, "OK");
+
                 return;
             }
-            
+
             AvailableDatabases = await _neo4jService.LoadDatabases();
 
             if (!string.IsNullOrWhiteSpace(connectionString.Database))
                 CurrentDatabase = AvailableDatabases.SingleOrDefault(ad => ad.Name == connectionString.Database);
 
             if (CurrentDatabase == null)
-                CurrentDatabase = AvailableDatabases.Single(ad => ad.Default);
+                CurrentDatabase = AvailableDatabases.SingleOrDefault(ad => ad.Default) ?? AvailableDatabases.FirstOrDefault();
         }
 
         public void DeleteQueryResult(QueryResult queryResult)
         {
-            var index = QueryResults.IndexOf(qr => qr.Id == queryResult.Id);
-
-            QueryResults.RemoveAt(index);
+            var item = QueryResults.FirstOrDefault(qr => qr.Id == queryResult.Id);
+            if (item != null)
+                QueryResults.Remove(item);
         }
 
         [NotifyPropertyChangedInvocator]
@@ -122,6 +123,7 @@ namespace Xamarin.Neo4j.ViewModels
                 _currentDatabase = value;
 
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(CanExecuteQuery));
             }
         }
 
@@ -158,10 +160,13 @@ namespace Xamarin.Neo4j.ViewModels
                 _query = value;
 
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(CanExecuteQuery));
             }
         }
 
         public bool CanExecuteQuery => !string.IsNullOrWhiteSpace(Query) && CurrentDatabase != null;
+
+        public bool IsEmpty => QueryResults?.Count == 0;
 
         #endregion
     }

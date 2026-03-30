@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <title>Graph</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html, body { width: 100%; height: 100%; overflow: hidden; background: {{backgroundColor}}; }
+            canvas { display: block; position: absolute; top: 0; left: 0; }
+
+            #popup {
+                display: none;
+                position: fixed;
+                bottom: 24px;
+                left: 16px;
+                right: 16px;
+                background: rgba(20, 20, 30, 0.95);
+                color: #fff;
+                border-radius: 12px;
+                padding: 14px 16px;
+                font-family: -apple-system, sans-serif;
+                font-size: 13px;
+                line-height: 1.5;
+                max-height: 40%;
+                overflow-y: auto;
+                z-index: 100;
+            }
+            #popup .lbl {
+                font-size: 15px;
+                font-weight: 600;
+                margin-bottom: 6px;
+                color: #7EC8E3;
+            }
+            #popup .prop { color: #ccc; }
+            #popup .prop b { color: #fff; }
+        </style>
+    </head>
+    <body>
+        <canvas id="c"></canvas>
+        <div id="popup"></div>
+
+        <script>
+        (function () {
+            var nodesData = {{nodes}};
+            var edgesData = {{edges}};
+
+            if (nodesData.length === 0) {
+                document.body.innerHTML = "<div style='padding:24px;font-family:-apple-system,sans-serif;color:#888;font-size:15px'>No graph data — query must return nodes.</div>";
+                return;
+            }
+
+            var canvas = document.getElementById('c');
+            var ctx    = canvas.getContext('2d');
+            var popup  = document.getElementById('popup');
+            var W = 0, H = 0, dpr = window.devicePixelRatio || 1;
+
+            // ---- node/edge state ----
+            var nodes = nodesData.map(function (d, i) {
+                return { id: d.id, label: d.label || String(d.id), title: d.title || '', color: d.color || '#5A99D4', x: 0, y: 0, vx: 0, vy: 0 };
+            });
+            var edges = edgesData.map(function (d) {
+                return { from: d.from, to: d.to, label: d.label || '' };
+            });
+            var nodeById = {};
+            nodes.forEach(function (n) { nodeById[n.id] = n; });
+
+            // ---- compute degree per node ----
+            nodes.forEach(function (n) { n.degree = 0; });
+            edges.forEach(function (e) {
+                if (nodeById[e.from]) nodeById[e.from].degree++;
+                if (nodeById[e.to]) nodeById[e.to].degree++;
+            });
+            var maxDegree = 1;
+            nodes.forEach(function (n) { if (n.degree > maxDegree) maxDegree = n.degree; });
+
+            // ---- resize ----
+            function resize() {
+                W = document.documentElement.clientWidth  || window.innerWidth  || document.body.clientWidth  || 300;
+                H = document.documentElement.clientHeight || window.innerHeight || document.body.clientHeight || 400;
+                canvas.style.width  = W + 'px';
+                canvas.style.height = H + 'px';
+                canvas.width  = W * dpr;
+                canvas.height = H * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            // place nodes in a circle around center
+            var N = nodes.length;
+            function placeInitial() {
+                var r = Math.min(W, H) * (0.32 + Math.min(N / 200, 0.5));
+                nodes.forEach(function (n, i) {
+                    var a = (2 * Math.PI * i) / N - Math.PI / 2;
+                    n.x = W / 2 + r * Math.cos(a);
+                    n.y = H / 2 + r * Math.sin(a);
+                });
+            }
+
+            // ---- physics (scaled by node count) ----
+            var large = N > 50;
+            var BASE_REPULSION = large ? 15000 : 5000;
+            var LEAF_SPRING    = large ? 60 : 60;
+            var HUB_SPRING     = large ? 300 : 200;
+            var SPRING_K       = 0.03;
+            var DAMP           = large ? 0.65 : 0.8;
+            var GRAVITY        = large ? 0.003 : 0.008;
+            var MAX_VEL        = large ? 12 : 15;
+
+            // pre-tag hubs vs leaves for fast lookup
+            var HUB_THRESHOLD = Math.max(3, maxDegree * 0.3);
+            nodes.forEach(function (n) { n.isHub = n.degree >= HUB_THRESHOLD; });
+
+            function step() {
+                var i, j, a, b, dx, dy, d, f;
+
+                // repulsion — much stronger between hubs to separate clusters
+                var cutoff = large ? 1500 : Infinity;
+                for (i = 0; i < N; i++) {
+                    for (j = i + 1; j < N; j++) {
+                        a = nodes[i]; b = nodes[j];
+                        dx = b.x - a.x; dy = b.y - a.y;
+                        d = Math.sqrt(dx * dx + dy * dy) || 1;
+                        if (d > cutoff) continue;
+                        var rep = BASE_REPULSION;
+                        if (a.isHub && b.isHub) rep *= 3;
+                        else if (a.isHub || b.isHub) rep *= 1.5;
+                        f = rep / (d * d);
+                        var fx = f * dx / d, fy = f * dy / d;
+                        a.vx -= fx; a.vy -= fy;
+                        b.vx += fx; b.vy += fy;
+                    }
+                }
+
+                // spring attraction — short for leaves, long for hub-to-hub
+                edges.forEach(function (e) {
+                    a = nodeById[e.from]; b = nodeById[e.to];
+                    if (!a || !b) return;
+                    // leaf-to-hub: short spring (leaf stays close as petal)
+                    // hub-to-hub: long spring (clusters separate)
+                    var len;
+                    if (a.isHub && b.isHub) {
+                        len = HUB_SPRING;
+                    } else {
+                        var hubDeg = Math.max(a.degree, b.degree);
+                        len = LEAF_SPRING + (HUB_SPRING - LEAF_SPRING) * 0.3 * (hubDeg / maxDegree);
+                    }
+                    dx = b.x - a.x; dy = b.y - a.y;
+                    d = Math.sqrt(dx * dx + dy * dy) || 1;
+                    f = SPRING_K * (d - len);
+                    var fx = f * dx / d, fy = f * dy / d;
+                    a.vx += fx; a.vy += fy;
+                    b.vx -= fx; b.vy -= fy;
+                });
+
+                // gravity toward center + damping + velocity cap
+                nodes.forEach(function (n) {
+                    n.vx += (W / 2 - n.x) * GRAVITY;
+                    n.vy += (H / 2 - n.y) * GRAVITY;
+                    n.vx *= DAMP; n.vy *= DAMP;
+                    var v = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
+                    if (v > MAX_VEL) { n.vx *= MAX_VEL / v; n.vy *= MAX_VEL / v; }
+                    n.x += n.vx; n.y += n.vy;
+                });
+            }
+
+            // auto-fit: zoom and pan so all nodes are visible with padding
+            function fitToView() {
+                if (N === 0) return;
+                var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                nodes.forEach(function (n) {
+                    if (n.x < minX) minX = n.x;
+                    if (n.y < minY) minY = n.y;
+                    if (n.x > maxX) maxX = n.x;
+                    if (n.y > maxY) maxY = n.y;
+                });
+                var pad = NODE_R * 3;
+                var gw = (maxX - minX) + pad * 2;
+                var gh = (maxY - minY) + pad * 2;
+                if (gw < 1) gw = 1;
+                if (gh < 1) gh = 1;
+                var newZoom = Math.min(W / gw, H / gh, 2);
+                newZoom = Math.max(newZoom, 0.05);
+                var cx = (minX + maxX) / 2;
+                var cy = (minY + maxY) / 2;
+                zoom = newZoom;
+                panX = W / 2 - cx * zoom;
+                panY = H / 2 - cy * zoom;
+            }
+
+            // ---- camera (pan + zoom, initial zoom based on node count) ----
+            var initialZoom = N <= 10 ? 1 : Math.max(0.05, 1 / Math.sqrt(N / 10));
+            var panX = 0, panY = 0, zoom = initialZoom;
+
+            // screen coords -> world coords
+            function toWorld(sx, sy) {
+                return { x: (sx - panX) / zoom, y: (sy - panY) / zoom };
+            }
+
+            // ---- draw ----
+            var NODE_R   = 20;
+            var NODE_SEL = '#E8A838';
+            var EDGE_CLR = '#666';
+            var TEXT_CLR = '{{textColor}}';
+            var selected = null;
+
+            function draw() {
+                ctx.save();
+                ctx.clearRect(0, 0, W, H);
+                ctx.translate(panX, panY);
+                ctx.scale(zoom, zoom);
+
+                // edges
+                edges.forEach(function (e) {
+                    var a = nodeById[e.from], b = nodeById[e.to];
+                    if (!a || !b) return;
+                    var ang = Math.atan2(b.y - a.y, b.x - a.x);
+                    var tx  = b.x - NODE_R * Math.cos(ang);
+                    var ty  = b.y - NODE_R * Math.sin(ang);
+
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(tx, ty);
+                    ctx.strokeStyle = EDGE_CLR;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // arrowhead
+                    ctx.beginPath();
+                    ctx.moveTo(tx, ty);
+                    ctx.lineTo(tx - 9 * Math.cos(ang - 0.4), ty - 9 * Math.sin(ang - 0.4));
+                    ctx.lineTo(tx - 9 * Math.cos(ang + 0.4), ty - 9 * Math.sin(ang + 0.4));
+                    ctx.closePath();
+                    ctx.fillStyle = EDGE_CLR;
+                    ctx.fill();
+
+                    if (e.label) {
+                        ctx.fillStyle = TEXT_CLR;
+                        ctx.font = '10px -apple-system, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(e.label, (a.x + b.x) / 2, (a.y + b.y) / 2 - 5);
+                    }
+                });
+
+                // nodes
+                nodes.forEach(function (n) {
+                    var isSel = n === selected;
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, NODE_R, 0, 2 * Math.PI);
+                    ctx.fillStyle = isSel ? NODE_SEL : n.color;
+                    ctx.fill();
+                    if (isSel) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                    }
+
+                    var lbl = n.label.length > 10 ? n.label.slice(0, 9) + '…' : n.label;
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 11px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(lbl, n.x, n.y);
+                });
+                ctx.restore();
+            }
+
+            // ---- popup ----
+            function showPopup(n) {
+                selected = n;
+                var html = '<div class="lbl">' + escHtml(n.label) + '</div>';
+                if (n.title) {
+                    n.title.split(', ').forEach(function (pair) {
+                        var idx = pair.indexOf(': ');
+                        if (idx > -1) {
+                            html += '<div class="prop"><b>' + escHtml(pair.slice(0, idx)) + ':</b> ' + escHtml(pair.slice(idx + 2)) + '</div>';
+                        } else {
+                            html += '<div class="prop">' + escHtml(pair) + '</div>';
+                        }
+                    });
+                } else {
+                    html += '<div class="prop">No properties</div>';
+                }
+                popup.innerHTML = html;
+                popup.style.display = 'block';
+                draw();
+            }
+
+            function hidePopup() {
+                selected = null;
+                popup.style.display = 'none';
+                draw();
+            }
+
+            function escHtml(s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            }
+
+            // ---- expand / collapse ----
+            var lastTapTime = 0, lastTapNode = null;
+            var expandedBy = {}; // nodeId -> [childIds added by expanding that node]
+
+            // initial nodes are never collapsible
+            var initialNodeIds = {};
+            nodes.forEach(function (n) { initialNodeIds[n.id] = true; });
+
+            function recomputeDegrees() {
+                N = nodes.length;
+                nodes.forEach(function (n) { n.degree = 0; });
+                edges.forEach(function (e) {
+                    if (nodeById[e.from]) nodeById[e.from].degree++;
+                    if (nodeById[e.to]) nodeById[e.to].degree++;
+                });
+                maxDegree = 1;
+                nodes.forEach(function (n) { if (n.degree > maxDegree) maxDegree = n.degree; });
+                HUB_THRESHOLD = Math.max(3, maxDegree * 0.3);
+                nodes.forEach(function (n) { n.isHub = n.degree >= HUB_THRESHOLD; });
+            }
+
+            function toggleExpandCollapse(n) {
+                if (expandedBy[n.id]) {
+                    collapseNode(n);
+                } else {
+                    expandNode(n);
+                }
+            }
+
+            function expandNode(n) {
+                var f = document.createElement('iframe');
+                f.style.display = 'none';
+                f.src = 'app://expand?nodeId=' + n.id;
+                document.body.appendChild(f);
+                setTimeout(function () { document.body.removeChild(f); }, 200);
+            }
+
+            function collapseNode(n) {
+                var childIds = expandedBy[n.id];
+                if (!childIds) return;
+
+                // only remove children that aren't initial nodes and aren't
+                // also owned by another still-expanded node
+                var otherOwned = {};
+                Object.keys(expandedBy).forEach(function (ownerId) {
+                    if (ownerId == n.id) return;
+                    expandedBy[ownerId].forEach(function (cid) { otherOwned[cid] = true; });
+                });
+
+                var toRemove = {};
+                childIds.forEach(function (cid) {
+                    if (!initialNodeIds[cid] && !otherOwned[cid]) toRemove[cid] = true;
+                });
+
+                // also collapse any nodes that were expanded from nodes we're about to remove
+                Object.keys(toRemove).forEach(function (rid) {
+                    if (expandedBy[rid]) {
+                        expandedBy[rid].forEach(function (cid) {
+                            if (!initialNodeIds[cid] && !otherOwned[cid]) toRemove[cid] = true;
+                        });
+                        delete expandedBy[rid];
+                    }
+                });
+
+                // remove edges connected to removed nodes
+                edges = edges.filter(function (e) {
+                    return !toRemove[e.from] && !toRemove[e.to];
+                });
+
+                // remove nodes
+                nodes = nodes.filter(function (nd) { return !toRemove[nd.id]; });
+                Object.keys(toRemove).forEach(function (rid) { delete nodeById[rid]; });
+
+                delete expandedBy[n.id];
+
+                // hide popup if the selected node was removed
+                if (selected && toRemove[selected.id]) hidePopup();
+
+                recomputeDegrees();
+                resumeLoop();
+            }
+
+            // called from C# via EvaluateJavaScriptAsync after expand query completes
+            window.addGraphData = function (newNodes, newEdges, originId) {
+                var origin = nodeById[originId];
+                var ox = origin ? origin.x : W / 2;
+                var oy = origin ? origin.y : H / 2;
+                var addedIds = [];
+
+                newNodes.forEach(function (d) {
+                    if (nodeById[d.id]) {
+                        addedIds.push(d.id); // track even existing ones as children
+                        return;
+                    }
+                    var angle = Math.random() * 2 * Math.PI;
+                    var nd = {
+                        id: d.id, label: d.label || String(d.id), title: d.title || '',
+                        color: d.color || '#5A99D4',
+                        x: ox + (40 + Math.random() * 40) * Math.cos(angle),
+                        y: oy + (40 + Math.random() * 40) * Math.sin(angle),
+                        vx: 0, vy: 0, degree: 0
+                    };
+                    nodes.push(nd);
+                    nodeById[nd.id] = nd;
+                    addedIds.push(d.id);
+                });
+
+                newEdges.forEach(function (d) {
+                    var exists = edges.some(function (e) {
+                        return e.from === d.from && e.to === d.to && e.label === (d.label || '');
+                    });
+                    if (exists) return;
+                    if (!nodeById[d.from] || !nodeById[d.to]) return;
+                    edges.push({ from: d.from, to: d.to, label: d.label || '' });
+                });
+
+                expandedBy[originId] = addedIds;
+
+                recomputeDegrees();
+                resumeLoop();
+            };
+
+            // ---- interaction handling (touch + mouse/pointer) ----
+            var ptrStartX, ptrStartY, ptrEndX, ptrEndY, ptrStartTime, dragging = null, panning = false, mouseDown = false;
+
+            function nodeAt(sx, sy) {
+                var w = toWorld(sx, sy);
+                for (var i = nodes.length - 1; i >= 0; i--) {
+                    var n = nodes[i];
+                    if (Math.hypot(n.x - w.x, n.y - w.y) <= (NODE_R + 8) / zoom) return n;
+                }
+                return null;
+            }
+
+            function coordFromEvent(e) {
+                var rect = canvas.getBoundingClientRect();
+                var src = e.touches ? e.touches[0] : e;
+                return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+            }
+
+            function handleStart(e) {
+                if (e.touches) e.preventDefault();
+                var p = coordFromEvent(e);
+                ptrStartX = ptrEndX = p.x;
+                ptrStartY = ptrEndY = p.y;
+                ptrStartTime = Date.now();
+                dragging = nodeAt(p.x, p.y);
+                panning = !dragging;
+                mouseDown = true;
+            }
+
+            function handleMove(e) {
+                if (e.touches) e.preventDefault();
+                if (!mouseDown) return;
+                var p = coordFromEvent(e);
+                var dx = p.x - ptrEndX, dy = p.y - ptrEndY;
+                ptrEndX = p.x; ptrEndY = p.y;
+                if (panning) {
+                    panX += dx; panY += dy;
+                    draw();
+                    return;
+                }
+                if (!dragging) return;
+                var w = toWorld(p.x, p.y);
+                dragging.x = w.x; dragging.y = w.y;
+                dragging.vx = 0; dragging.vy = 0;
+                draw();
+            }
+
+            function handleEnd(e) {
+                if (e.touches) e.preventDefault();
+                if (!mouseDown) return;
+                var dt = Date.now() - ptrStartTime;
+                var moved = Math.hypot(ptrEndX - ptrStartX, ptrEndY - ptrStartY) > 8;
+
+                if (!moved && dt < 300) {
+                    var hit = nodeAt(ptrStartX, ptrStartY);
+                    var now = Date.now();
+                    // double-tap detection — toggle expand/collapse
+                    if (hit && hit === lastTapNode && (now - lastTapTime) < 400) {
+                        lastTapNode = null; lastTapTime = 0;
+                        toggleExpandCollapse(hit);
+                    } else if (hit) {
+                        lastTapNode = hit; lastTapTime = now;
+                        if (hit === selected) hidePopup();
+                        else showPopup(hit);
+                    } else {
+                        lastTapNode = null; lastTapTime = 0;
+                        hidePopup();
+                    }
+                }
+
+                dragging = null;
+                panning = false;
+                mouseDown = false;
+                resumeLoop();
+            }
+
+            // touch events
+            canvas.addEventListener('touchstart', handleStart, { passive: false });
+            canvas.addEventListener('touchmove',  handleMove,  { passive: false });
+            canvas.addEventListener('touchend',   handleEnd,   { passive: false });
+
+            // mouse events (for simulator / desktop WebView)
+            canvas.addEventListener('mousedown', handleStart);
+            canvas.addEventListener('mousemove', handleMove);
+            canvas.addEventListener('mouseup',   handleEnd);
+
+            // dismiss popup when tapping/clicking it
+            popup.addEventListener('touchend', function (e) { e.stopPropagation(); hidePopup(); });
+            popup.addEventListener('click',    function (e) { e.stopPropagation(); hidePopup(); });
+
+            // ---- zoom: scroll wheel ----
+            canvas.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                var rect = canvas.getBoundingClientRect();
+                var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+                var factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+                var newZoom = Math.min(Math.max(zoom * factor, 0.1), 10);
+                // zoom toward mouse position
+                panX = mx - (mx - panX) * (newZoom / zoom);
+                panY = my - (my - panY) * (newZoom / zoom);
+                zoom = newZoom;
+                draw();
+            }, { passive: false });
+
+            // ---- zoom: pinch (two-finger touch) ----
+            var pinchStartDist = 0, pinchStartZoom = 1;
+
+            canvas.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    var dx = e.touches[0].clientX - e.touches[1].clientX;
+                    var dy = e.touches[0].clientY - e.touches[1].clientY;
+                    pinchStartDist = Math.hypot(dx, dy) || 1;
+                    pinchStartZoom = zoom;
+                    dragging = null;
+                    panning = false;
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', function (e) {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    var dx = e.touches[0].clientX - e.touches[1].clientX;
+                    var dy = e.touches[0].clientY - e.touches[1].clientY;
+                    var dist = Math.hypot(dx, dy) || 1;
+                    var rect = canvas.getBoundingClientRect();
+                    var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                    var my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+                    var newZoom = Math.min(Math.max(pinchStartZoom * (dist / pinchStartDist), 0.1), 10);
+                    panX = mx - (mx - panX) * (newZoom / zoom);
+                    panY = my - (my - panY) * (newZoom / zoom);
+                    zoom = newZoom;
+                    draw();
+                }
+            }, { passive: false });
+
+            // ---- animation loop ----
+            var ticks = 0, rafId = null;
+            var maxTicks = large ? 250 : 400;
+
+            function loop() {
+                step();
+                draw();
+                ticks++;
+                if (ticks < maxTicks) rafId = requestAnimationFrame(loop);
+                else rafId = null;
+            }
+
+            function resumeLoop() {
+                ticks = 0;
+                if (!rafId) rafId = requestAnimationFrame(loop);
+            }
+
+            // ---- init ----
+            var initRetries = 0;
+
+            function init() {
+                resize();
+                // WebView may not have layout yet — retry until we get real dimensions
+                if ((W <= 1 || H <= 1) && initRetries < 20) {
+                    initRetries++;
+                    setTimeout(init, 50);
+                    return;
+                }
+                placeInitial();
+                // center the camera on the graph with the pre-computed zoom
+                panX = W / 2 - (W / 2) * zoom;
+                panY = H / 2 - (H / 2) * zoom;
+                loop();
+            }
+
+            window.addEventListener('resize', function () {
+                resize();
+                draw();
+            });
+
+            // Use rAF to ensure the browser has laid out the canvas before we read its size
+            requestAnimationFrame(function () {
+                requestAnimationFrame(init);
+            });
+        })();
+        </script>
+    </body>
+</html>

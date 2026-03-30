@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:fonts="clr-namespace:Xamarin.Neo4j.Fonts;assembly=Xamarin.Neo4j"
              Title="Settings"
@@ -13,17 +13,27 @@
     </ContentPage.IconImageSource>
 
     <ContentPage.Content>
-        <StackLayout VerticalOptions="FillAndExpand">
-            <TableView VerticalOptions="StartAndExpand" Intent="Settings" Background="Transparent">
+        <Grid RowDefinitions="*,Auto">
+            <TableView Grid.Row="0" Intent="Settings" Background="Transparent" HasUnevenRows="True">
                 <TableRoot>
-                    <TableSection>
+                    <TableSection Title="Support">
+                        <TextCell Text="Contact Support" Command="{Binding Commands[ContactSupport]}" />
+                        <TextCell Text="Rate PocketGraph" Command="{Binding Commands[RateApp]}" />
+                    </TableSection>
+
+                    <TableSection Title="Data">
+                        <TextCell Text="Clear Saved Connections" Command="{Binding Commands[ClearConnections]}" />
+                        <TextCell Text="Clear Saved Queries" Command="{Binding Commands[ClearQueries]}" />
+                    </TableSection>
+
+                    <TableSection Title="About">
                         <TextCell Text="{Binding VersionLabel}" />
                         <TextCell Text="Software Licenses" Command="{Binding Commands[OpenLicensesPage]}" />
                     </TableSection>
                 </TableRoot>
             </TableView>
 
-            <StackLayout Spacing="15" Margin="25" VerticalOptions="EndAndExpand">
+            <StackLayout Grid.Row="1" Spacing="15" Padding="25">
                 <Label Text="A product of" HorizontalOptions="Center" FontAttributes="Italic" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
                 <Image Source="resoftware.png" HorizontalOptions="Center" WidthRequest="100">
                     <Image.GestureRecognizers>
@@ -31,6 +41,6 @@
                     </Image.GestureRecognizers>
                 </Image>
             </StackLayout>
-        </StackLayout>
+        </Grid>
     </ContentPage.Content>
 </ContentPage>

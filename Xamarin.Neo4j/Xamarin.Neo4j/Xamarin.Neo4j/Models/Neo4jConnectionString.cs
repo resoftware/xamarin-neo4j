@@ -30,18 +30,24 @@ namespace Xamarin.Neo4j.Models
         public Tuple<string, bool, bool> ParseHost()
         {
             var fullHost = Scheme + Host;
-            
+
             if (fullHost.StartsWith("neo4j://"))
                 return new Tuple<string, bool, bool>(fullHost, false, false);
 
-            if (fullHost.StartsWith("bolt://"))
-                return new Tuple<string, bool, bool>(fullHost.Replace("bolt://", "neo4j://"), false, false);
-
             if (fullHost.StartsWith("neo4j+s://"))
-                return new Tuple<string, bool, bool>(fullHost.Replace("neo4j+s://", "neo4j://"), true, false);
+                return new Tuple<string, bool, bool>(fullHost, true, true);
 
             if (fullHost.StartsWith("neo4j+ssc://"))
-                return new Tuple<string, bool, bool>(fullHost.Replace("neo4j+ssc://", "neo4j://"), true, true);
+                return new Tuple<string, bool, bool>(fullHost, true, true);
+
+            if (fullHost.StartsWith("bolt://"))
+                return new Tuple<string, bool, bool>(fullHost, false, false);
+
+            if (fullHost.StartsWith("bolt+s://"))
+                return new Tuple<string, bool, bool>(fullHost, true, true);
+
+            if (fullHost.StartsWith("bolt+ssc://"))
+                return new Tuple<string, bool, bool>(fullHost, true, true);
 
             throw new NotSupportedException("Unknown protocol.");
         }

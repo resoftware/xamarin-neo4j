@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Xaml;
 using Xamarin.Neo4j.Managers;
 using Xamarin.Neo4j.Models;
 using Xamarin.Neo4j.ViewModels;

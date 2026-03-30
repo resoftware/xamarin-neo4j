@@ -8,7 +8,7 @@
 //
 
 using Foundation;
-using Xamarin.Forms;
+using Microsoft.Maui.Controls;
 using Xamarin.Neo4j.iOS.Services;
 using Xamarin.Neo4j.Services.Interfaces;
 

@@ -9,12 +9,11 @@
 
 using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
-using Acr.UserDialogs;
-using Xamarin.Essentials;
-using Xamarin.Forms;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
 using Xamarin.Neo4j.Annotations;
 using Xamarin.Neo4j.Managers;
 using Xamarin.Neo4j.Models;
@@ -26,7 +25,7 @@ namespace Xamarin.Neo4j.ViewModels
     public class AddConnectionViewModel : ViewModelBase, INotifyPropertyChanged
     {
         private Guid? _id;
-        
+
         private string _scheme, _host, _username, _password;
 
         private readonly Neo4jService _neo4jService;
@@ -37,11 +36,11 @@ namespace Xamarin.Neo4j.ViewModels
         {
             if (neo4JConnectionString == null)
                 InitializeDefaultValues();
-            
-            else 
+
+            else
                 InitializeValues(neo4JConnectionString);
 
-            _neo4jService = DependencyService.Resolve<Neo4jService>();
+            _neo4jService = IPlatformApplication.Current.Services.GetRequiredService<Neo4jService>();
 
             Commands.Add("Test", new Command(async () =>
             {
@@ -49,7 +48,7 @@ namespace Xamarin.Neo4j.ViewModels
 
                 var (_, message) = await _neo4jService.EstablishConnection(connectionString);
 
-                await UserDialogs.Instance.AlertAsync(message);
+                await Application.Current.MainPage.DisplayAlert("", message, "OK");
             }));
 
             Commands.Add("Save", new Command(async () =>
@@ -58,18 +57,18 @@ namespace Xamarin.Neo4j.ViewModels
 
                 if (_id.HasValue)
                     await ConnectionStringManager.UpdateConnectionString(_id.Value, connectionString);
-                
+
                 else
                 {
-                    var namePromptResult = await UserDialogs.Instance.PromptAsync("How do you want to name this connection?", "Save Connection", "Save", "Cancel");
+                    var name = await Application.Current.MainPage.DisplayPromptAsync("Save Connection", "How do you want to name this connection?", "Save", "Cancel");
 
-                    if (!namePromptResult.Ok || string.IsNullOrWhiteSpace(namePromptResult.Value))
+                    if (string.IsNullOrWhiteSpace(name))
                         return;
 
-                    connectionString.Name = namePromptResult.Value;
-                    
+                    connectionString.Name = name;
+
                     await ConnectionStringManager.AddConnectionString(connectionString);
-                } 
+                }
 
                 await Navigation.PopAsync();
             }));
@@ -84,14 +83,14 @@ namespace Xamarin.Neo4j.ViewModels
                     await Navigation.PushAsync(new SessionPage(connectionString));
 
                 else
-                    await UserDialogs.Instance.AlertAsync(message);
+                    await Application.Current.MainPage.DisplayAlert("", message, "OK");
             }));
         }
 
         private void InitializeValues(Neo4jConnectionString neo4JConnectionString)
         {
             _id = neo4JConnectionString.Id;
-            
+
             Scheme = neo4JConnectionString.Scheme;
             Host = neo4JConnectionString.Host;
             Username = neo4JConnectionString.Username;
@@ -135,7 +134,7 @@ namespace Xamarin.Neo4j.ViewModels
                 OnPropertyChanged(nameof(Scheme));
             }
         }
-        
+
         public string Host
         {
             get => _host;

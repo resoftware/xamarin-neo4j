@@ -9,9 +9,9 @@
 
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using Acr.UserDialogs;
-using Xamarin.Forms;
+using Microsoft.Maui.Controls;
 using Xamarin.Neo4j.Annotations;
 using Xamarin.Neo4j.Managers;
 using Xamarin.Neo4j.Models;
@@ -42,7 +42,7 @@ namespace Xamarin.Neo4j.ViewModels
         {
             if (ConnectionStringManager.ActiveConnectionString == null)
             {
-                await UserDialogs.Instance.AlertAsync("Please select a connection before starting a session.");
+                await Application.Current.MainPage.DisplayAlert("", "Please select a connection before starting a session.", "OK");
 
                 return;
             }
@@ -72,8 +72,14 @@ namespace Xamarin.Neo4j.ViewModels
                 _queries = value;
 
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEmpty));
+                OnPropertyChanged(nameof(HasItems));
             }
         }
+
+        public bool IsEmpty => !(_queries?.Any() ?? false);
+
+        public bool HasItems => !IsEmpty;
 
         #endregion
     }

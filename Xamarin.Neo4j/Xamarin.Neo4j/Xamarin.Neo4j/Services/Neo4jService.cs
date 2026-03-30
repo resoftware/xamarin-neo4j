@@ -10,16 +10,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Devices;
 using Neo4j.Driver;
 using Neo4jClient;
 using Neo4jClient.Cypher;
-using Xamarin.Forms;
 using Xamarin.Neo4j.Models;
+using Xamarin.Neo4j.Security;
 using Xamarin.Neo4j.Services;
 using Xamarin.Neo4j.Services.Interfaces;
 using Xamarin.Neo4j.Utilities;
-
-[assembly: Dependency(typeof(Neo4jService))]
 
 namespace Xamarin.Neo4j.Services
 {
@@ -29,7 +31,7 @@ namespace Xamarin.Neo4j.Services
 
         public Neo4jService()
         {
-            var trustManagerService = DependencyService.Get<ITrustManagerService>();
+            var trustManagerService = IPlatformApplication.Current.Services.GetRequiredService<ITrustManagerService>();
 
             _nativeTrustManager = trustManagerService.GetNativeTrustManager();
         }
@@ -45,15 +47,22 @@ namespace Xamarin.Neo4j.Services
                 var driver = GraphDatabase.Driver(url,
                     AuthTokens.Basic(connectionString.Username, connectionString.Password), (config) =>
                     {
-                        config.WithEncryptionLevel(isEncrypted ? EncryptionLevel.Encrypted : EncryptionLevel.None);
-
-                        if (!ignoreTrust && Device.RuntimePlatform == Device.iOS)
+                        if (!ignoreTrust && DeviceInfo.Platform == DevicePlatform.iOS)
                             config.WithTrustManager(_nativeTrustManager);
                     });
 
                 GraphClient = new BoltGraphClient(driver);
 
-                await GraphClient.ConnectAsync();
+                try
+                {
+                    await GraphClient.ConnectAsync();
+                }
+                catch
+                {
+                    // ConnectAsync runs Neo4j-specific metadata queries that non-Neo4j
+                    // servers (e.g. Memgraph) don't support. The underlying driver is
+                    // still connected and usable for running queries.
+                }
             }
 
             catch (ServiceUnavailableException e)
@@ -81,31 +90,48 @@ namespace Xamarin.Neo4j.Services
                 return new Tuple<bool, string>(false, e.Message);
             }
 
+            catch (Exception e)
+            {
+                return new Tuple<bool, string>(false, $"[{e.GetType().FullName}] {e.Message}\n\n{e.InnerException?.Message}\n\n{e.StackTrace}");
+            }
+
             return new Tuple<bool, string>(true, "Connection was successful!");
         }
 
         public async Task<List<Database>> LoadDatabases()
         {
-            var session = GraphClient.Driver.AsyncSession(d => d.WithDatabase("system"));
-            var cursor = await session.RunAsync("SHOW DATABASES;");
-
-            var databases = new List<Database>();
-
-            while (await cursor.FetchAsync())
+            try
             {
-                var name = cursor.Current.Values["name"].As<string>();
-                var status = cursor.Current.Values["currentStatus"].As<string>();
-                var @default = cursor.Current.Values["default"].As<bool>();
+                var session = GraphClient.Driver.AsyncSession(d => d.WithDatabase("system"));
+                var cursor = await session.RunAsync("SHOW DATABASES;");
 
-                databases.Add(new Database()
+                var databases = new List<Database>();
+
+                while (await cursor.FetchAsync())
                 {
-                    Name = name,
-                    Status = status,
-                    Default = @default
-                });
-            }
+                    var name = cursor.Current.Values["name"].As<string>();
+                    var status = cursor.Current.Values["currentStatus"].As<string>();
+                    var @default = cursor.Current.Values["default"].As<bool>();
 
-            return databases;
+                    databases.Add(new Database()
+                    {
+                        Name = name,
+                        Status = status,
+                        Default = @default
+                    });
+                }
+
+                return databases;
+            }
+            catch
+            {
+                // Memgraph and some Neo4j setups don't expose a system database.
+                // Fall back to a single default database.
+                return new List<Database>
+                {
+                    new Database { Name = "memgraph", Status = "online", Default = true }
+                };
+            }
         }
 
         public async Task<QueryResult> ExecuteQuery(string query, Neo4jConnectionString connectionString)
@@ -159,6 +185,67 @@ namespace Xamarin.Neo4j.Services
                 };
             }
 
+            catch (ClientException e)
+            {
+                return new QueryResult()
+                {
+                    Id = Guid.NewGuid(),
+                    Success = false,
+                    Query = query,
+                    ConnectionString = connectionString,
+                    ErrorMessage = e.Message
+                };
+            }
+        }
+
+        public async Task<QueryResult> ExpandNode(long nodeId, Neo4jConnectionString connectionString)
+        {
+            var query = "MATCH (n)-[r]-(m) WHERE id(n) = $nodeId RETURN n, r, m";
+
+            var results = new Dictionary<string, List<object>>();
+
+            try
+            {
+                var session = GraphClient.Driver.AsyncSession(d => d.WithDatabase(connectionString.Database));
+                var cursor = await session.RunAsync(query, new { nodeId });
+
+                while (await cursor.FetchAsync())
+                {
+                    foreach (var key in cursor.Current.Keys)
+                        if (results.ContainsKey(key) == false)
+                            results.Add(key, new List<object>());
+
+                    foreach (var record in cursor.Current.Values)
+                    {
+                        var value = record.Value;
+
+                        switch (value)
+                        {
+                            case INode _:
+                                results[record.Key].Add(value.As<INode>());
+                                break;
+
+                            case IRelationship _:
+                                results[record.Key].Add(value.As<IRelationship>());
+                                break;
+
+                            default:
+                                results[record.Key].Add(value);
+                                break;
+                        }
+                    }
+                }
+
+                return new QueryResult()
+                {
+                    Id = Guid.NewGuid(),
+                    Success = true,
+                    CanDisplayGraph = true,
+                    Query = query,
+                    ConnectionString = connectionString,
+                    Results = results
+                };
+            }
             catch (ClientException e)
             {
                 return new QueryResult()

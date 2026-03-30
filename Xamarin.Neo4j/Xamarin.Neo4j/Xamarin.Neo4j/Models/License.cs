@@ -9,8 +9,8 @@
 
 using System;
 using System.Windows.Input;
-using Xamarin.Essentials;
-using Xamarin.Forms;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
 
 namespace Xamarin.Neo4j.Models
 {
@@ -25,6 +25,6 @@ namespace Xamarin.Neo4j.Models
         /// <summary>
         /// Opens the repository in the browser.
         /// </summary>
-        public ICommand OpenRepo => new Command(() => Launcher.OpenAsync(new Uri(Repo)));
+        public ICommand OpenRepo => new Command(() => Launcher.Default.OpenAsync(new Uri(Repo)));
     }
 }

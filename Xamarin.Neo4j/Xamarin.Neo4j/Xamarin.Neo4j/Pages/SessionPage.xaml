@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:fonts="clr-namespace:Xamarin.Neo4j.Fonts;assembly=Xamarin.Neo4j"
              xmlns:controls="clr-namespace:Xamarin.Neo4j.Controls;assembly=Xamarin.Neo4j"
-             xmlns:pancakeView="clr-namespace:Xamarin.Forms.PancakeView;assembly=Xamarin.Forms.PancakeView"
              x:Class="Xamarin.Neo4j.Pages.SessionPage">
     <NavigationPage.TitleView>
         <StackLayout Spacing="0">
@@ -37,23 +36,39 @@
 
     <ContentPage.Content>
         <StackLayout VerticalOptions="FillAndExpand">
-            <pancakeView:PancakeView BackgroundColor="White" CornerRadius="2" Padding="4" Margin="16">
-                <pancakeView:PancakeView CornerRadius="2">
-                    <pancakeView:PancakeView.Border>
-                        <pancakeView:Border Thickness="2" Color="#d8e5f1" />
-                    </pancakeView:PancakeView.Border>
+            <Border BackgroundColor="White" StrokeShape="RoundRectangle 2" Padding="4" Margin="16">
+                <Border Stroke="#d8e5f1" StrokeThickness="2" StrokeShape="RoundRectangle 2">
+                    <controls:QueryEditor Text="{Binding Query}" ExecuteClicked="ExecuteQuery" FontSize="14" MaxHeight="200" HorizontalOptions="FillAndExpand" AutoSize="TextChanges" />
+                </Border>
+            </Border>
 
-                    <controls:QueryEditor Text="{Binding Query}" ExecuteClicked="ExecuteQuery" FontSize="14" MaxHeight="200" HorizontalOptions="FillAndExpand" AutoSize="TextChanges"  />
-                </pancakeView:PancakeView>
-            </pancakeView:PancakeView>
+            <Grid VerticalOptions="FillAndExpand">
+                <CollectionView x:Name="resultsCollection" ItemsSource="{Binding QueryResults}" VerticalOptions="FillAndExpand">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <controls:QueryResultView CloseRequested="CloseResultView" />
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
 
-            <CollectionView x:Name="resultsCollection" ItemsSource="{Binding QueryResults}" VerticalOptions="FillAndExpand">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate>
-                        <controls:QueryResultView CloseRequested="CloseResultView" />
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+                <StackLayout IsVisible="{Binding IsEmpty}" VerticalOptions="Center" HorizontalOptions="Center" Spacing="12" Padding="32">
+                    <Label Text="{x:Static fonts:FontAwesomeSolid.Database}"
+                           FontFamily="{StaticResource FontAwesomeSolid}"
+                           FontSize="48"
+                           TextColor="{StaticResource SecondaryTextColor}"
+                           HorizontalOptions="Center" />
+                    <Label Text="No results yet"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource SecondaryTextColor}"
+                           HorizontalOptions="Center" />
+                    <Label Text="Write a query and tap the play button to run it"
+                           FontSize="14"
+                           TextColor="{StaticResource SecondaryTextColor}"
+                           HorizontalTextAlignment="Center"
+                           HorizontalOptions="Center" />
+                </StackLayout>
+            </Grid>
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>

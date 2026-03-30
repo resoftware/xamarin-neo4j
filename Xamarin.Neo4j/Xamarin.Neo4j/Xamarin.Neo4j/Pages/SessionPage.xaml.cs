@@ -1,6 +1,6 @@
 using System;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Xaml;
 using Xamarin.Neo4j.Models;
 using Xamarin.Neo4j.Utilities;
 using Xamarin.Neo4j.ViewModels;
@@ -10,8 +10,6 @@ namespace Xamarin.Neo4j.Pages
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class SessionPage : ContentPage
     {
-        private bool _canCompleteEntry = true;
-        
         private SessionViewModel ViewModel => (SessionViewModel) BindingContext;
 
         public SessionPage(Neo4jConnectionString connectionString, string initialQuery = null)
@@ -20,10 +18,10 @@ namespace Xamarin.Neo4j.Pages
 
             BindingContext = new SessionViewModel(Navigation, connectionString, initialQuery);
 
-            MessagingCenter.Subscribe<SessionViewModel>(this, "ResetScroll", (sender) =>
+            ViewModel.ScrollToTop += (_, _) =>
             {
                 resultsCollection.ScrollTo(0, 0, ScrollToPosition.Start, true);
-            });
+            };
         }
 
         private void FocusDatabasePicker(object sender, EventArgs e)

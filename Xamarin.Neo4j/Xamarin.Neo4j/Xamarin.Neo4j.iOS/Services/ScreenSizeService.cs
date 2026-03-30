@@ -7,10 +7,9 @@
 // © Xamarin.Neo4j.iOS
 //
 
+using Microsoft.Maui.Controls;
 using UIKit;
-using Xamarin.Forms;
 using Xamarin.Neo4j.iOS.Services;
-using Xamarin.Neo4j.Services;
 using Xamarin.Neo4j.Services.Interfaces;
 
 [assembly: Dependency(typeof(ScreenSizeService))]

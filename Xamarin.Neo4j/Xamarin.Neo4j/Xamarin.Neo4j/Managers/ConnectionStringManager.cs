@@ -12,8 +12,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
+using Microsoft.Maui.Storage;
 using Newtonsoft.Json;
-using Xamarin.Essentials;
 using Xamarin.Neo4j.Models;
 
 namespace Xamarin.Neo4j.Managers
@@ -26,7 +26,7 @@ namespace Xamarin.Neo4j.Managers
 
         public static async Task<List<Neo4jConnectionString>> GetConnectionStrings()
         {
-            var json = await SecureStorage.GetAsync(ConnectionStringsKey);
+            var json = await SecureStorage.Default.GetAsync(ConnectionStringsKey);
 
             if (string.IsNullOrEmpty(json))
                 return new List<Neo4jConnectionString>();
@@ -47,7 +47,7 @@ namespace Xamarin.Neo4j.Managers
         {
             var json = JsonConvert.SerializeObject(connectionStrings);
 
-            await SecureStorage.SetAsync(ConnectionStringsKey, json);
+            await SecureStorage.Default.SetAsync(ConnectionStringsKey, json);
         }
 
         public static async Task DeleteConnectionString(Neo4jConnectionString neo4JConnectionString)
@@ -63,12 +63,12 @@ namespace Xamarin.Neo4j.Managers
         public static async Task UpdateConnectionString(Guid id, Neo4jConnectionString connectionString)
         {
             var connectionStrings = await GetConnectionStrings();
-            
+
             var connectionStringToUpdate = connectionStrings.FirstOrDefault(cs => cs.Id == id);
-            
+
             if (connectionStringToUpdate == null)
                 return;
-            
+
             connectionStringToUpdate.Scheme = connectionString.Scheme;
             connectionStringToUpdate.Host = connectionString.Host;
             connectionStringToUpdate.Username = connectionString.Username;

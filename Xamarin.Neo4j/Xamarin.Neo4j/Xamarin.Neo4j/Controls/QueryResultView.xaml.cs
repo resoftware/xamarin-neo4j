@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Acr.UserDialogs;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Xaml;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui;
+using Neo4j.Driver;
 using Xamarin.Neo4j.Managers;
+using Xamarin.Neo4j.Services;
 using Xamarin.Neo4j.Models;
 using Xamarin.Neo4j.Pages;
 using Xamarin.Neo4j.Utilities;
+using Query = Xamarin.Neo4j.Models.Query;
 
 namespace Xamarin.Neo4j.Controls
 {
@@ -27,65 +30,128 @@ namespace Xamarin.Neo4j.Controls
         public QueryResultView()
         {
             InitializeComponent();
+            BindingContextChanged += OnBindingContextChanged;
+            graphView.Navigating += OnGraphViewNavigating;
         }
 
-        protected override void OnPropertyChanged(string propertyName = null)
+        private async void OnGraphViewNavigating(object sender, WebNavigatingEventArgs e)
         {
-            base.OnPropertyChanged(propertyName);
+            Console.WriteLine($"[Graph] Inline Navigating: {e.Url}");
 
-            if (propertyName == nameof(BindingContext))
+            if (!e.Url.Contains("expand") || !e.Url.Contains("nodeId")) return;
+
+            e.Cancel = true;
+
+            var connectionString = ConnectionStringManager.ActiveConnectionString;
+            if (connectionString == null) return;
+
+            try
             {
-                ParseNeovisHtml();
+                var neo4jService = IPlatformApplication.Current.Services.GetRequiredService<Neo4jService>();
 
-                graphView.Source = new HtmlWebViewSource()
-                {
-                    Html = _neovisHtml
-                };
+                var match = System.Text.RegularExpressions.Regex.Match(e.Url, @"nodeId=(\d+)");
+                if (!match.Success || !long.TryParse(match.Groups[1].Value, out var nodeId)) return;
+
+                var result = await neo4jService.ExpandNode(nodeId, connectionString);
+
+                if (!result.Success || result.Results == null) return;
+
+                var (nodesJson, edgesJson) = GraphDataHelper.BuildJson(result.Results, connectionString.Id);
+
+                var js = $"window.addGraphData({nodesJson}, {edgesJson}, {nodeId})";
+                await graphView.EvaluateJavaScriptAsync(js);
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Graph] Inline expand failed: {ex.Message}");
+            }
+        }
+
+        private void OnBindingContextChanged(object sender, EventArgs e)
+        {
+            if (BindingContext == null || graphView == null)
+            {
+                Console.WriteLine($"[Graph] OnBindingContextChanged skipped: BindingContext={BindingContext}, graphView={graphView}");
+                return;
+            }
+
+            Console.WriteLine($"[Graph] OnBindingContextChanged fired, CanDisplayGraph={QueryResult?.CanDisplayGraph}");
+
+            ParseNeovisHtmlSafe();
+
+            Console.WriteLine($"[Graph] Setting graphView.Source, html length={_neovisHtml?.Length ?? 0}");
+
+            graphView.Source = new HtmlWebViewSource { Html = _neovisHtml };
         }
 
         private void ParseNeovisHtml()
         {
             var assembly = Assembly.GetExecutingAssembly();
-            var resourceName = "Xamarin.Neo4j.Visualization.neovis.html";
+            var resourceName = "Xamarin.Neo4j.Visualization.visgraph.html";
 
-            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            var available = string.Join("\n", assembly.GetManifestResourceNames());
+            Console.WriteLine($"[Graph] Looking for: {resourceName}");
+            Console.WriteLine($"[Graph] Available resources: {available.Replace("\n", ", ")}");
+
+            var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+            {
+                _neovisHtml = $"<html><body style='background:#111;color:#f55;font-family:monospace;padding:16px'>" +
+                              $"<b>Resource not found:</b><br>{resourceName}<br><br>" +
+                              $"<b>Available:</b><br>{available.Replace("\n", "<br>")}</body></html>";
+                return;
+            }
+
+            using (stream)
             using (var reader = new StreamReader(stream))
             {
-                var (url, isEncrypted, ignoreTrust) = QueryResult.ConnectionString.ParseHost();
-
                 var result = reader.ReadToEnd();
+                var connectionId = ConnectionStringManager.ActiveConnectionString?.Id ?? Guid.Empty;
 
-                result = result.Replace("{{host}}", url);
-                result = result.Replace("{{database}}", QueryResult.ConnectionString.Database);
-                result = result.Replace("{{username}}", QueryResult.ConnectionString.Username);
-                result = result.Replace("{{password}}", QueryResult.ConnectionString.Password);
-                result = result.Replace("{{encryption}}", isEncrypted ? "ENCRYPTION_ON" : "ENCRYPTION_OFF");
-                result = result.Replace("{{trust}}", ignoreTrust ? "TRUST_ALL_CERTIFICATES" : "TRUST_SYSTEM_CA_SIGNED_CERTIFICATES");
-                result = result.Replace("{{query}}", QueryResult.DisplayQuery);
-                result = result.Replace("{{backgroundColor}}", App.Current.RequestedTheme == OSAppTheme.Dark ? "#292C31" : "#FFFFFF");
+                var (nodesJson, edgesJson) = GraphDataHelper.BuildJson(QueryResult.Results, connectionId);
+
+                var isDark = Application.Current.RequestedTheme == AppTheme.Dark;
+                result = result.Replace("{{nodes}}", nodesJson);
+                result = result.Replace("{{edges}}", edgesJson);
+                result = result.Replace("{{backgroundColor}}", isDark ? "#292C31" : "#FFFFFF");
+                result = result.Replace("{{textColor}}", isDark ? "#FFFFFF" : "#000000");
 
                 _neovisHtml = result;
             }
         }
 
+        private void ParseNeovisHtmlSafe()
+        {
+            try
+            {
+                ParseNeovisHtml();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Graph] ParseNeovisHtml threw: {ex.GetType().Name}: {ex.Message}");
+                _neovisHtml = $"<html><body style='background:#111;color:#f55;font-family:monospace;padding:16px'>" +
+                              $"<b>{ex.GetType().Name}</b><br>{ex.Message}<br><br>{ex.StackTrace?.Replace("\n", "<br>")}</body></html>";
+            }
+        }
 
         private async void OpenNeovis(object sender, EventArgs e)
         {
-            await Application.Current.MainPage.Navigation.PushAsync(new GraphPage(_neovisHtml));
+            var neo4jService = IPlatformApplication.Current.Services.GetRequiredService<Neo4jService>();
+            var connectionString = ConnectionStringManager.ActiveConnectionString;
+            await Application.Current.MainPage.Navigation.PushAsync(new GraphPage(_neovisHtml, connectionString, neo4jService));
         }
 
         private async void SaveQuery(object sender, EventArgs e)
         {
-            var queryNameResult = await UserDialogs.Instance.PromptAsync("How should the query be called?");
+            var name = await Application.Current.MainPage.DisplayPromptAsync("Save Query", "How should the query be called?");
 
-            if (queryNameResult.Ok)
+            if (!string.IsNullOrWhiteSpace(name))
             {
                 var query = new Query()
                 {
                     Id = Guid.NewGuid(),
                     QueryText = QueryResult.Query,
-                    Name = queryNameResult.Value,
+                    Name = name,
                 };
 
                 SavedQueryManager.AddSavedQuery(query);

@@ -1,6 +1,6 @@
-﻿using System;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Xaml;
 using Xamarin.Neo4j.Pages;
 using Xamarin.Neo4j.Themes;
 
@@ -19,32 +19,27 @@ namespace Xamarin.Neo4j
             MainPage = new NavigationPage(new RootPage());
         }
 
-
-        private void SetTheme(OSAppTheme theme)
+        private void SetTheme(AppTheme theme)
         {
             Resources = theme switch
             {
-                OSAppTheme.Dark => new DarkTheme(),
-                OSAppTheme.Light => new LightTheme(),
+                AppTheme.Dark => new DarkTheme(),
+                AppTheme.Light => new LightTheme(),
 
                 _ => new LightTheme()
             };
         }
 
-
         protected override void OnStart()
         {
-            // Handle when your app starts
         }
 
         protected override void OnSleep()
         {
-            // Handle when your app sleeps
         }
 
         protected override void OnResume()
         {
-            // Handle when your app resumes
         }
     }
 }

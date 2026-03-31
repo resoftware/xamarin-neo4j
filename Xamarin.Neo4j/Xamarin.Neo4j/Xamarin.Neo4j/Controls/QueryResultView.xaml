@@ -14,12 +14,12 @@
 
         <!-- Error display -->
         <Border IsVisible="{Binding IsError}"
-                BackgroundColor="#ffebee"
+                BackgroundColor="{DynamicResource ErrorBackground}"
                 StrokeThickness="0"
                 Padding="12">
             <StackLayout Spacing="6">
                 <Label Text="{Binding ErrorMessage}"
-                       TextColor="#c62828"
+                       TextColor="{DynamicResource ErrorTextColor}"
                        FontSize="14"
                        FontFamily="RobotoMono" />
             </StackLayout>

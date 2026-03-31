@@ -1,8 +1,12 @@
 using Android.App;
 using Android.Content.PM;
 using Android.Content.Res;
+using Android.Views;
+using AndroidX.AppCompat.Widget;
+using AndroidX.Core.View;
 using Microsoft.Maui;
 using Microsoft.Maui.ApplicationModel;
+using AColor = Android.Graphics.Color;
 
 namespace Xamarin.Neo4j.Android
 {
@@ -26,11 +30,39 @@ namespace Xamarin.Neo4j.Android
             if (IPlatformApplication.Current?.Application is App app)
             {
                 var nightMode = Resources.Configuration.UiMode & UiMode.NightMask;
-                var theme = nightMode == UiMode.NightYes
-                    ? AppTheme.Dark
-                    : AppTheme.Light;
+                var isDark = nightMode == UiMode.NightYes;
 
-                MainThread.BeginInvokeOnMainThread(() => app.UpdateTheme(theme));
+                // Status bar icon appearance: dark icons on light bg, white icons on dark bg
+                if (Window != null)
+                {
+                    var controller = new WindowInsetsControllerCompat(Window, Window.DecorView);
+                    controller.AppearanceLightStatusBars = !isDark;
+                }
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                    app.UpdateTheme(isDark ? AppTheme.Dark : AppTheme.Light));
+            }
+        }
+
+        public override void OnWindowFocusChanged(bool hasFocus)
+        {
+            base.OnWindowFocusChanged(hasFocus);
+            if (hasFocus)
+                TintToolbarOverflow(Window?.DecorView as ViewGroup);
+        }
+
+        // MAUI creates its toolbar programmatically so theme-based tinting doesn't reach
+        // the overflow icon. Walk the view tree and apply the tint directly.
+        private static void TintToolbarOverflow(ViewGroup? parent)
+        {
+            if (parent == null) return;
+            for (var i = 0; i < parent.ChildCount; i++)
+            {
+                var child = parent.GetChildAt(i);
+                if (child is Toolbar toolbar)
+                    toolbar.OverflowIcon?.SetTint(AColor.White);
+                else if (child is ViewGroup vg)
+                    TintToolbarOverflow(vg);
             }
         }
     }

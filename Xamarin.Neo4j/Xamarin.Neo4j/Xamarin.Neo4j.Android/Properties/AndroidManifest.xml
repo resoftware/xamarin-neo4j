@@ -22,5 +22,5 @@
         </intent>
     </queries>
 
-    <application android:label="PocketGraph" android:allowBackup="true"></application>
+    <application android:label="PocketGraph" android:icon="@mipmap/appicon" android:allowBackup="true"></application>
 </manifest>

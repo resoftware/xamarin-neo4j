@@ -12,25 +12,21 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
-    <!-- Main app theme — MAUI draws its own toolbar so we use NoActionBar -->
-    <style name="MainTheme" parent="Theme.AppCompat.Light.NoActionBar">
+    <!-- Main app theme — extends MAUI's generated base so all MAUI internals work correctly -->
+    <style name="MainTheme" parent="Maui.MainTheme.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <!-- Light status bar = false so status bar icons show white on dark bg -->
-        <item name="android:windowLightStatusBar">false</item>
-        <!-- Context action bar (long-press menu) should match nav bar color -->
+        <!-- colorOnPrimary controls text/icon color on primary-colored surfaces (toolbar, overflow icon) -->
+        <item name="colorOnPrimary">#ffffff</item>
         <item name="actionModeBackground">@color/colorPrimary</item>
-        <!-- Make overflow (3-dot) button icon white -->
         <item name="actionOverflowButtonStyle">@style/OverflowMenuButton</item>
-        <!-- Make CAB (contextual action bar) title/icon white without affecting popup menus -->
         <item name="actionModeStyle">@style/ActionModeStyle</item>
     </style>
 
     <style name="OverflowMenuButton" parent="Widget.AppCompat.ActionButton.Overflow">
         <item name="android:tint">@android:color/white</item>
+        <item name="tint">@android:color/white</item>
     </style>
 
     <style name="ActionModeStyle" parent="Widget.AppCompat.ActionMode">

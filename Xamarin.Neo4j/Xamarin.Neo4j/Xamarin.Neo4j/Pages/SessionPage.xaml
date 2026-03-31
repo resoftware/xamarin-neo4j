@@ -39,10 +39,17 @@
         <Grid RowDefinitions="Auto,*">
 
             <!-- Row 0: Query editor -->
-            <Border Grid.Row="0" BackgroundColor="White" StrokeShape="RoundRectangle 2" Padding="4" Margin="16">
-                <Border Stroke="#d8e5f1" StrokeThickness="2" StrokeShape="RoundRectangle 2">
-                    <controls:QueryEditor Text="{Binding Query}" ExecuteClicked="ExecuteQuery" FontSize="14" MaxHeight="200" HorizontalOptions="FillAndExpand" AutoSize="TextChanges" />
-                </Border>
+            <Border Grid.Row="0"
+                    BackgroundColor="{DynamicResource QueryTextBackground}"
+                    Stroke="{DynamicResource QueryTextBorder}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 2"
+                    Padding="4"
+                    Margin="16">
+                <controls:QueryEditor Text="{Binding Query}" ExecuteClicked="ExecuteQuery"
+                                     Placeholder="MATCH (n) RETURN n LIMIT 25"
+                                     PlaceholderColor="{DynamicResource SecondaryTextColor}"
+                                     FontSize="14" MaxHeight="200" HorizontalOptions="FillAndExpand" AutoSize="TextChanges" />
             </Border>
 
             <!-- Row 1: Single scroll area — results then saved queries always visible -->
@@ -136,11 +143,9 @@
                                 <DataTemplate>
                                     <Border Margin="12,0,12,8"
                                             BackgroundColor="{DynamicResource Extreme}"
-                                            StrokeShape="RoundRectangle 8"
-                                            StrokeThickness="0">
-                                        <Border.Shadow>
-                                            <Shadow Brush="Black" Offset="0,2" Radius="6" Opacity="0.12" />
-                                        </Border.Shadow>
+                                            Stroke="{DynamicResource QueryTextBorder}"
+                                            StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 4">
                                         <StackLayout Spacing="0">
                                             <!-- Action row -->
                                             <Grid ColumnDefinitions="*,*,*,*,Auto" Padding="4,2">

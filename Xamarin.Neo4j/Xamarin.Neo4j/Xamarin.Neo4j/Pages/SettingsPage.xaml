@@ -34,7 +34,7 @@
             </TableView>
 
             <StackLayout Grid.Row="1" Spacing="15" Padding="25">
-                <Label Text="A product of" HorizontalOptions="Center" FontAttributes="Italic" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+                <Label Text="A product of" HorizontalOptions="Center" FontAttributes="Italic" FontSize="12" TextColor="{DynamicResource SecondaryTextColor}" />
                 <Image Source="resoftware.png" HorizontalOptions="Center" WidthRequest="100">
                     <Image.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding Commands[OpenReSoftwareSite]}" />

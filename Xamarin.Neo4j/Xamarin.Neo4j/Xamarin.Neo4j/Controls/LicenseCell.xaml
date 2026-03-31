@@ -7,7 +7,7 @@
             </Label.GestureRecognizers>
         </Label>
         <ContentView Padding="10" BackgroundColor="#D8D8D8">
-            <Label Text="{Binding LicenseText}" />
+            <Label Text="{Binding LicenseText}" TextColor="#1a1a1a" />
         </ContentView>
     </StackLayout>
 </ViewCell>

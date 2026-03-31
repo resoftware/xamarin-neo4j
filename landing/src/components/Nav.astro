@@ -68,6 +68,13 @@ const APP_STORE_URL = "https://apps.apple.com/nl/app/pocketgraph/id1604368926";
     transition: background 0.2s, color 0.2s;
   }
   .nav-dl:hover { background: #e2e2e2; color: #0c0c0c; }
+
+  @media (max-width: 480px) {
+    #nav { padding: 0 1.25rem; height: 64px; }
+    .nav-icon { width: 40px; height: 40px; }
+    .nav-logo { font-size: 1rem; gap: 10px; margin-left: 0; }
+    .nav-logo span { display: none; }
+  }
 </style>
 
 <script is:inline>

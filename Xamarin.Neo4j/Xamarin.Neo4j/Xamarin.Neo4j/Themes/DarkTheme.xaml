@@ -31,7 +31,7 @@
 
     <Style TargetType="TabbedPage" ApplyToDerivedTypes="True">
         <Setter Property="BackgroundColor" Value="White"/>
-        <Setter Property="BarTextColor" Value="Black"/>
+        <Setter Property="BarTextColor" Value="White"/>
         <Setter Property="SelectedTabColor" Value="White"/>
     </Style>
 

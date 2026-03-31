@@ -23,6 +23,15 @@
         <Setter Property="BackgroundColor" Value="Transparent" />
     </Style>
 
+    <Style TargetType="Entry" ApplyToDerivedTypes="True">
+        <Setter Property="TextColor" Value="Black" />
+        <Setter Property="PlaceholderColor" Value="#868a92" />
+    </Style>
+
+    <Style TargetType="Picker" ApplyToDerivedTypes="True">
+        <Setter Property="TextColor" Value="Black" />
+    </Style>
+
     <Style TargetType="NavigationPage">
         <Setter Property="BarBackgroundColor" Value="{StaticResource Accent}"/>
         <Setter Property="BarTextColor" Value="White" />

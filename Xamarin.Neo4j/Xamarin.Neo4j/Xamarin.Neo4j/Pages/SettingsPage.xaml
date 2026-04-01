@@ -13,10 +13,8 @@
     </ContentPage.IconImageSource>
 
     <ContentPage.Content>
-        <Grid RowDefinitions="*,Auto">
-
-            <ScrollView Grid.Row="0">
-                <StackLayout Padding="16" Spacing="24">
+        <ScrollView>
+            <StackLayout Padding="16" Spacing="24">
 
                     <!-- Support -->
                     <StackLayout Spacing="8">
@@ -147,23 +145,18 @@
                         </Border>
                     </StackLayout>
 
+                    <!-- Footer -->
+                    <StackLayout Spacing="15" Padding="9,16">
+                        <Label Text="A product of" HorizontalOptions="Center" FontAttributes="Italic" FontSize="12"
+                               TextColor="{DynamicResource SecondaryTextColor}" />
+                        <Image Source="resoftware.png" HorizontalOptions="Center" WidthRequest="100">
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Commands[OpenReSoftwareSite]}" />
+                            </Image.GestureRecognizers>
+                        </Image>
+                    </StackLayout>
+
                 </StackLayout>
             </ScrollView>
-
-            <StackLayout Grid.Row="1" Spacing="4" Padding="25,16">
-                <Label HorizontalOptions="Center" FontSize="12">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding Commands[OpenReSoftwareSite]}" />
-                    </Label.GestureRecognizers>
-                    <Label.FormattedText>
-                        <FormattedString>
-                            <Span Text="A product of " TextColor="{DynamicResource SecondaryTextColor}" FontAttributes="Italic" />
-                            <Span Text="Re: Software" TextColor="{DynamicResource Accent}" FontAttributes="Bold" />
-                        </FormattedString>
-                    </Label.FormattedText>
-                </Label>
-            </StackLayout>
-
-        </Grid>
     </ContentPage.Content>
 </ContentPage>

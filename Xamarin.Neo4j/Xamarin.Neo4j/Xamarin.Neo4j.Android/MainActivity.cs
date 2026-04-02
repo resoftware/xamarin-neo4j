@@ -53,21 +53,24 @@ namespace Xamarin.Neo4j.Android
         {
             base.OnWindowFocusChanged(hasFocus);
             if (hasFocus)
-                TintToolbarOverflow(Window?.DecorView as ViewGroup);
+                TintToolbarIcons(Window?.DecorView as ViewGroup);
         }
 
         // MAUI creates its toolbar programmatically so theme-based tinting doesn't reach
         // the overflow icon. Walk the view tree and apply the tint directly.
-        private static void TintToolbarOverflow(ViewGroup? parent)
+        private static void TintToolbarIcons(ViewGroup? parent)
         {
             if (parent == null) return;
             for (var i = 0; i < parent.ChildCount; i++)
             {
                 var child = parent.GetChildAt(i);
                 if (child is Toolbar toolbar)
+                {
                     toolbar.OverflowIcon?.SetTint(AColor.White);
+                    toolbar.NavigationIcon?.SetTint(AColor.White);
+                }
                 else if (child is ViewGroup vg)
-                    TintToolbarOverflow(vg);
+                    TintToolbarIcons(vg);
             }
         }
     }

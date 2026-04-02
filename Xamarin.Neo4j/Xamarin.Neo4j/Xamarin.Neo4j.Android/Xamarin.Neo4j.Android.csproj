@@ -32,6 +32,10 @@
                       Link="Assets\logo.png" />
         <AndroidAsset Include="..\Xamarin.Neo4j.iOS\Resources\resoftware.png"
                       Link="Assets\resoftware.png" />
+        <MauiImage Include="..\Xamarin.Neo4j.iOS\Resources\resoftware.png"
+                   Link="Resources\Images\resoftware.png" />
+        <MauiImage Include="..\Xamarin.Neo4j.iOS\Resources\logo.png"
+                   Link="Resources\Images\logo.png" />
     </ItemGroup>
 
     <ItemGroup>

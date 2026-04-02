@@ -60,7 +60,7 @@ namespace Xamarin.Neo4j.iOS.CustomRenderers
 
             const float accessoryHeight = 58f;
             const float buttonWidth = 33f;
-            const float executeButtonWidth = 90f;
+
             const float padding = 8f;
             const float pillHeight = 38f;
 
@@ -119,6 +119,7 @@ namespace Xamarin.Neo4j.iOS.CustomRenderers
             NSLayoutConstraint.ActivateConstraints(new[]
             {
                 pillContainer.LeadingAnchor.ConstraintEqualTo(accessoryView.LeadingAnchor, padding),
+                pillContainer.TrailingAnchor.ConstraintEqualTo(accessoryView.TrailingAnchor, -padding),
                 pillContainer.CenterYAnchor.ConstraintEqualTo(accessoryView.CenterYAnchor),
                 pillContainer.HeightAnchor.ConstraintEqualTo(pillHeight),
             });

@@ -27,6 +27,12 @@ namespace Xamarin.Neo4j.Models
 
         public string Password { get; set; }
 
+        public bool IsSecure => Scheme?.Contains("+s") ?? false;
+
+        public string SchemeShortName => Scheme != null && Scheme.StartsWith("bolt") ? "bolt" : "neo4j";
+
+        public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Host : Name;
+
         public Tuple<string, bool, bool> ParseHost()
         {
             var fullHost = Scheme + Host;

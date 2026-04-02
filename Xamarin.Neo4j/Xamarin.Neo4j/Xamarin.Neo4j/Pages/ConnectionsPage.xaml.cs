@@ -42,9 +42,7 @@ namespace Xamarin.Neo4j.Pages
             ViewModel.LoadConnectionStrings();
         }
 
-        private void OpenSession(object sender, ItemTappedEventArgs e)
-        {
-            ViewModel.OpenSession((Neo4jConnectionString)e.Item);
-        }
+
+
     }
 }

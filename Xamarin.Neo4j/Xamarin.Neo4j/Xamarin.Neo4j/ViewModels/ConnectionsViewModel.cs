@@ -50,6 +50,12 @@ namespace Xamarin.Neo4j.ViewModels
                 LoadConnectionStrings();
             }));
 
+            Commands.Add("OpenConnection", new Command((o) =>
+            {
+                if (o is Neo4jConnectionString cs)
+                    OpenSession(cs);
+            }));
+
             Commands.Add("OpenSettings", new Command(async () =>
             {
                 await Navigation.PushAsync(new SettingsPage());
@@ -87,12 +93,27 @@ namespace Xamarin.Neo4j.ViewModels
                 OnPropertyChanged(nameof(ConnectionStrings));
                 OnPropertyChanged(nameof(IsEmpty));
                 OnPropertyChanged(nameof(HasItems));
+                OnPropertyChanged(nameof(ConnectionCountLabel));
             }
         }
 
         public bool IsEmpty => !(_connectionStrings?.Any() ?? false);
 
         public bool HasItems => !IsEmpty;
+
+        public string ConnectionCountLabel
+        {
+            get
+            {
+                var count = _connectionStrings?.Count() ?? 0;
+                return count switch
+                {
+                    0 => "No connections yet",
+                    1 => "1 connection",
+                    _ => $"{count} connections"
+                };
+            }
+        }
 
         #endregion
     }

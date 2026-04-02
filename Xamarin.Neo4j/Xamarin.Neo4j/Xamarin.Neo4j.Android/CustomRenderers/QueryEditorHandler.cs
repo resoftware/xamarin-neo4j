@@ -8,12 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Android.Content;
+using Android.Content.Res;
 using Android.Graphics;
+using Android.Graphics.Drawables;
 using Android.Text;
 using Android.Text.Style;
 using Android.Views;
 using Android.Views.InputMethods;
 using Android.Widget;
+using AndroidX.Core.View;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Xamarin.Neo4j.Controls;
@@ -49,6 +52,9 @@ namespace Xamarin.Neo4j.Android.CustomRenderers
             "FALSE", "NULL", "TRUE"
         ];
 
+        private LinearLayout _toolbar;
+        private bool _toolbarAttached;
+
         protected override void ConnectHandler(MauiAppCompatEditText platformView)
         {
             base.ConnectHandler(platformView);
@@ -58,43 +64,133 @@ namespace Xamarin.Neo4j.Android.CustomRenderers
                 | InputTypes.TextFlagMultiLine
                 | InputTypes.TextFlagNoSuggestions;
 
-            // Keyboard toolbar with symbol keys and Execute button
-            var toolbar = BuildToolbar(platformView);
+            // Build the keyboard toolbar
+            _toolbar = BuildToolbar(platformView);
+
+            // Attach toolbar once to the content view (stays in hierarchy, just hidden)
+            AttachToolbarOnce(platformView);
+
+            // Detect keyboard via visible frame height difference.
+            // Edge-to-edge and varying MAUI soft-input modes make WindowInsets unreliable,
+            // so we compare the root view height to the visible display frame.
+            platformView.ViewTreeObserver.GlobalLayout += (s, e) =>
+            {
+                var rootView = platformView.RootView;
+                if (rootView == null) return;
+
+                var rect = new global::Android.Graphics.Rect();
+                rootView.GetWindowVisibleDisplayFrame(rect);
+                var screenHeight = rootView.Height;
+                var keyboardHeight = screenHeight - rect.Bottom;
+
+                if (keyboardHeight > screenHeight * 0.15 && platformView.HasFocus)
+                {
+                    if (_toolbar.LayoutParameters is FrameLayout.LayoutParams lp)
+                    {
+                        lp.BottomMargin = keyboardHeight;
+                        _toolbar.LayoutParameters = lp;
+                    }
+                    _toolbar.Visibility = ViewStates.Visible;
+                }
+                else
+                {
+                    _toolbar.Visibility = ViewStates.Gone;
+                }
+            };
+
+            // Also hide on focus loss
             platformView.FocusChange += (s, e) =>
-                toolbar.Visibility = e.HasFocus ? ViewStates.Visible : ViewStates.Gone;
+            {
+                if (!e.HasFocus)
+                    _toolbar.Visibility = ViewStates.Gone;
+            };
 
             // Syntax highlighting
             platformView.AddTextChangedListener(new CypherTextWatcher(platformView, _keyWords));
             HighlightSyntax(platformView, _keyWords);
         }
 
+        private void AttachToolbarOnce(MauiAppCompatEditText platformView)
+        {
+            if (_toolbarAttached) return;
+
+            var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+            var decorView = activity?.Window?.DecorView as ViewGroup;
+            var contentView = decorView?.FindViewById<FrameLayout>(global::Android.Resource.Id.Content);
+            if (contentView == null) return;
+
+            var layoutParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.WrapContent,
+                GravityFlags.Bottom);
+            contentView.AddView(_toolbar, layoutParams);
+            _toolbar.Visibility = ViewStates.Gone;
+            _toolbarAttached = true;
+        }
+
         private LinearLayout BuildToolbar(MauiAppCompatEditText platformView)
         {
             var context = platformView.Context;
+            var density = context.Resources.DisplayMetrics.Density;
 
             var toolbar = new LinearLayout(context)
             {
-                Orientation = Orientation.Horizontal,
+                Orientation = global::Android.Widget.Orientation.Horizontal,
                 LayoutParameters = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MatchParent,
-                    ViewGroup.LayoutParams.WrapContent)
+                    (int)(48 * density))
             };
-            toolbar.SetBackgroundColor(Color.ParseColor("#F2F2F7"));
-            toolbar.SetPadding(8, 8, 8, 8);
-            toolbar.Visibility = ViewStates.Gone;
 
-            // Scrollable symbol key strip
+            // Theme-aware background
+            var isDark = (context.Resources.Configuration.UiMode & UiMode.NightMask) == UiMode.NightYes;
+            toolbar.SetBackgroundColor(Color.ParseColor(isDark ? "#141414" : "#F2F2F7"));
+            toolbar.SetPadding((int)(6 * density), (int)(6 * density), (int)(6 * density), (int)(6 * density));
+            toolbar.SetGravity(GravityFlags.CenterVertical);
+
+            // Pill container for symbol keys
+            var pillContainer = new LinearLayout(context)
+            {
+                Orientation = global::Android.Widget.Orientation.Horizontal,
+                LayoutParameters = new LinearLayout.LayoutParams(
+                    0, (int)(36 * density), 1f)
+            };
+            var pillBg = new GradientDrawable();
+            pillBg.SetCornerRadius(18 * density);
+            pillBg.SetColor(Color.ParseColor(isDark ? "#2a2a2a" : "#E8E8ED").ToArgb());
+            pillContainer.Background = pillBg;
+            pillContainer.SetGravity(GravityFlags.CenterVertical);
+
+            // Scrollable symbol key strip inside pill
             var scrollView = new HorizontalScrollView(context)
             {
-                LayoutParameters = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1f)
+                LayoutParameters = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent)
             };
             scrollView.HorizontalScrollBarEnabled = false;
 
-            var keyRow = new LinearLayout(context) { Orientation = Orientation.Horizontal };
-            foreach (var key in new[] { "(", ")", "[", "]", ":", "-", "->", "<-" })
+            var keyRow = new LinearLayout(context)
+            {
+                Orientation = global::Android.Widget.Orientation.Horizontal,
+                LayoutParameters = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.MatchParent)
+            };
+            keyRow.SetGravity(GravityFlags.CenterVertical);
+
+            var symbolTextColor = Color.ParseColor(isDark ? "#e2e2e2" : "#0c0c0c");
+            foreach (var key in new[] { "(", ")", "[", "]", "{", "}", ":", "-", "->", "<-", "\"", "'", ".", "=", "*", "$" })
             {
                 var captured = key;
-                var btn = CreatePillButton(context, captured);
+                var btn = new Button(context)
+                {
+                    Text = captured,
+                    LayoutParameters = new LinearLayout.LayoutParams(
+                        (int)(40 * density), ViewGroup.LayoutParams.MatchParent)
+                };
+                btn.SetTextColor(symbolTextColor);
+                btn.SetBackgroundColor(Color.Transparent);
+                btn.SetTextSize(global::Android.Util.ComplexUnitType.Sp, 15);
+                btn.SetAllCaps(false);
+                btn.SetPadding(0, 0, 0, 0);
                 btn.Click += (s, e) =>
                 {
                     var start = Math.Max(platformView.SelectionStart, 0);
@@ -105,12 +201,34 @@ namespace Xamarin.Neo4j.Android.CustomRenderers
             }
 
             scrollView.AddView(keyRow);
-            toolbar.AddView(scrollView);
+            pillContainer.AddView(scrollView);
+            toolbar.AddView(pillContainer);
 
-            // Execute button
-            var executeBtn = CreatePillButton(context, "Execute");
+            // Spacer
+            var spacer = new global::Android.Views.View(context)
+            {
+                LayoutParameters = new LinearLayout.LayoutParams((int)(6 * density), 0)
+            };
+            toolbar.AddView(spacer);
+
+            // Execute button — blue circle with play icon (▶)
+            var executeBtn = new TextView(context)
+            {
+                Text = "\u25B6",
+                LayoutParameters = new LinearLayout.LayoutParams(
+                    (int)(36 * density), (int)(36 * density)),
+                Gravity = GravityFlags.Center,
+                Clickable = true,
+                Focusable = true
+            };
             executeBtn.SetTextColor(Color.White);
-            executeBtn.SetBackgroundColor(Color.ParseColor("#007AFF"));
+            executeBtn.SetTextSize(global::Android.Util.ComplexUnitType.Sp, 18);
+            var executeBg = new GradientDrawable();
+            executeBg.SetCornerRadius(18 * density);
+            executeBg.SetColor(Color.ParseColor("#007AFF").ToArgb());
+            executeBtn.Background = executeBg;
+            executeBtn.SetPadding(0, 0, 0, 0);
+            executeBtn.SetIncludeFontPadding(false);
             executeBtn.Click += (s, e) =>
             {
                 if (VirtualView is QueryEditor queryEditor)
@@ -120,31 +238,21 @@ namespace Xamarin.Neo4j.Android.CustomRenderers
                     imm?.HideSoftInputFromWindow(platformView.WindowToken, 0);
                 }
             };
+
+            // Disable run button when query is empty
+            void updateRunEnabled()
+            {
+                var hasText = !string.IsNullOrWhiteSpace(platformView.Text);
+                executeBtn.Enabled = hasText;
+                executeBtn.Alpha = hasText ? 1f : 0.35f;
+            }
+            updateRunEnabled();
+            platformView.AddTextChangedListener(new SimpleTextWatcher(updateRunEnabled));
+
             toolbar.AddView(executeBtn);
 
-            // Attach toolbar to the parent view hierarchy
-            platformView.ViewTreeObserver.GlobalLayout += (s, e) =>
-            {
-                if (platformView.Parent is ViewGroup parent && toolbar.Parent == null)
-                    parent.AddView(toolbar);
-            };
-
+            toolbar.Visibility = ViewStates.Gone;
             return toolbar;
-        }
-
-        private static Button CreatePillButton(Context context, string label)
-        {
-            return new Button(context)
-            {
-                Text = label,
-                LayoutParameters = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WrapContent,
-                    ViewGroup.LayoutParams.WrapContent)
-                {
-                    MarginStart = 4,
-                    MarginEnd = 4
-                }
-            };
         }
 
         // ── Syntax highlighting ───────────────────────────────────────────────
@@ -191,6 +299,15 @@ namespace Xamarin.Neo4j.Android.CustomRenderers
 
         // ── Inner helpers ─────────────────────────────────────────────────────
 
+        private sealed class SimpleTextWatcher : Java.Lang.Object, ITextWatcher
+        {
+            private readonly Action _callback;
+            public SimpleTextWatcher(Action callback) { _callback = callback; }
+            public void BeforeTextChanged(Java.Lang.ICharSequence s, int start, int count, int after) { }
+            public void OnTextChanged(Java.Lang.ICharSequence s, int start, int before, int count) { }
+            public void AfterTextChanged(IEditable s) { _callback(); }
+        }
+
         private sealed class CypherTextWatcher : Java.Lang.Object, ITextWatcher
         {
             private readonly MauiAppCompatEditText _view;
@@ -210,8 +327,49 @@ namespace Xamarin.Neo4j.Android.CustomRenderers
             {
                 if (_updating) return;
                 _updating = true;
-                try { HighlightSyntax(_view, _keywords); }
+                try
+                {
+                    AutoCapitalizeKeywords(_view, _keywords);
+                    HighlightSyntax(_view, _keywords);
+                }
                 finally { _updating = false; }
+            }
+        }
+
+        internal static void AutoCapitalizeKeywords(MauiAppCompatEditText platformView, IEnumerable<string> keywords)
+        {
+            if (!Microsoft.Maui.Storage.Preferences.Default.Get("auto_capitalize", true)) return;
+
+            var text = platformView.Text ?? string.Empty;
+            var selStart = platformView.SelectionStart;
+            var selEnd = platformView.SelectionEnd;
+            var changed = false;
+            var chars = text.ToCharArray();
+
+            foreach (var word in keywords)
+            {
+                var regex = new Regex("\\b" + Regex.Escape(word) + "\\b", RegexOptions.IgnoreCase);
+                foreach (Match match in regex.Matches(text))
+                {
+                    // Skip if already uppercase
+                    var segment = text.Substring(match.Index, match.Length);
+                    if (segment == word) continue;
+
+                    // Don't capitalize if cursor is right at the end of this word (user still typing)
+                    if (selStart == match.Index + match.Length) continue;
+
+                    for (var i = 0; i < match.Length; i++)
+                        chars[match.Index + i] = word[i];
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                var newText = new string(chars);
+                platformView.SetText(newText, TextView.BufferType.Editable);
+                if (selStart >= 0 && selStart <= newText.Length)
+                    platformView.SetSelection(Math.Min(selStart, newText.Length), Math.Min(selEnd, newText.Length));
             }
         }
     }

@@ -67,7 +67,9 @@ namespace Xamarin.Neo4j.iOS.CustomRenderers
             var keys = new[]
             {
                 ("(", "("), (")", ")"), ("[", "["), ("]", "]"),
-                (":", ":"), ("-", "-"), ("\u2192", "->"), ("\u2190", "<-")
+                ("{", "{"), ("}", "}"), (":", ":"), ("-", "-"),
+                ("\u2192", "->"), ("\u2190", "<-"), ("\"", "\""),
+                ("'", "'"), (".", "."), ("=", "="), ("*", "*"), ("$", "$")
             };
 
             // Outer accessory — clear so system background shows through
@@ -147,7 +149,21 @@ namespace Xamarin.Neo4j.iOS.CustomRenderers
 
             platformView.InputAccessoryView = accessoryView;
 
-            platformView.Changed += (s, e) => HighlightWords(platformView, _keyWords);
+            // Ensure accessory hides when keyboard is dismissed by external gesture/scroll
+            var keyboardHideObserver = UIKeyboard.Notifications.ObserveWillHide((s, args) =>
+            {
+                // The InputAccessoryView is removed with the keyboard automatically.
+                // But if the editor remains first responder after an external dismiss
+                // (e.g. interactive dismiss on scroll), resign to fully hide the bar.
+                if (platformView.IsFirstResponder)
+                    platformView.ResignFirstResponder();
+            });
+
+            platformView.Changed += (s, e) =>
+            {
+                AutoCapitalizeKeywords(platformView, _keyWords);
+                HighlightWords(platformView, _keyWords);
+            };
 
             HighlightWords(platformView, _keyWords);
         }
@@ -189,6 +205,37 @@ namespace Xamarin.Neo4j.iOS.CustomRenderers
             {
                 attributedText.AddAttribute(UIStringAttributeKey.ForegroundColor, color,
                     new NSRange(match.Index, match.Length));
+            }
+        }
+
+        private static void AutoCapitalizeKeywords(UITextView platformView, IEnumerable<string> keywords)
+        {
+            if (!Microsoft.Maui.Storage.Preferences.Default.Get("auto_capitalize", true)) return;
+
+            var text = platformView.Text ?? string.Empty;
+            var cursorPos = platformView.SelectedRange;
+            var changed = false;
+            var chars = text.ToCharArray();
+
+            foreach (var word in keywords)
+            {
+                var regex = new Regex("\\b" + Regex.Escape(word) + "\\b", RegexOptions.IgnoreCase);
+                foreach (Match match in regex.Matches(text))
+                {
+                    var segment = text.Substring(match.Index, match.Length);
+                    if (segment == word) continue;
+                    if ((nint)cursorPos.Location == match.Index + match.Length) continue;
+
+                    for (var i = 0; i < match.Length; i++)
+                        chars[match.Index + i] = word[i];
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                platformView.Text = new string(chars);
+                platformView.SelectedRange = cursorPos;
             }
         }
 

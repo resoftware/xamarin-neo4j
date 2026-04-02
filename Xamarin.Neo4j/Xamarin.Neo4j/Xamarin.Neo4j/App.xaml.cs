@@ -49,7 +49,11 @@ namespace Xamarin.Neo4j
         {
             if (MainPage is NavigationPage navPage)
             {
-                navPage.BarBackgroundColor = Color.FromArgb("#31333b");
+                if (Resources.TryGetValue("NavigationBarColor", out var navColor) && navColor is Color color)
+                    navPage.BarBackgroundColor = color;
+                else
+                    navPage.BarBackgroundColor = Color.FromArgb("#31333b");
+
                 navPage.BarTextColor = Colors.White;
             }
         }

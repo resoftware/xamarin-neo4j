@@ -17,6 +17,7 @@
     <Color x:Key="QueryTextBorder">#e0e0e0</Color>
     <Color x:Key="QueryActionBar">#f5f5f5</Color>
     <Color x:Key="Extreme">#ffffff</Color>
+    <Color x:Key="NavigationBarColor">#0c0c0c</Color>
 
     <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
         <Setter Property="BackgroundColor" Value="{StaticResource PageBackground}" />
@@ -37,7 +38,7 @@
     </Style>
 
     <Style TargetType="NavigationPage">
-        <Setter Property="BarBackgroundColor" Value="#0c0c0c"/>
+        <Setter Property="BarBackgroundColor" Value="{StaticResource NavigationBarColor}"/>
         <Setter Property="BarTextColor" Value="#e2e2e2" />
     </Style>
 

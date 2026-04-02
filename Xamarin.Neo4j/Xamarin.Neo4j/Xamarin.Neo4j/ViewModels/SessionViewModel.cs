@@ -276,7 +276,7 @@ namespace Xamarin.Neo4j.ViewModels
             get
             {
                 var screenHeight = _screenSizeService.GetScreenHeight();
-                return Math.Max(200, screenHeight - 300);
+                return Math.Max(120, (screenHeight - 300) / 2);
             }
         }
 

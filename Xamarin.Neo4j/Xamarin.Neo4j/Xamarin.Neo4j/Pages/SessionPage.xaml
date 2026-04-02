@@ -30,7 +30,8 @@
             <ToolbarItem.IconImageSource>
                 <FontImageSource
                     FontFamily="{StaticResource FontAwesomeSolid}"
-                    Glyph="{x:Static fonts:FontAwesomeSolid.Play}" Size="20" />
+                    Glyph="{x:Static fonts:FontAwesomeSolid.Play}" Size="20"
+                    Color="#007AFF" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
     </ContentPage.ToolbarItems>
@@ -144,64 +145,64 @@
                         <StackLayout BindableLayout.ItemsSource="{Binding QueryResults}" Spacing="0">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="12,0,12,8"
+                                    <Border Margin="12,0,12,6"
                                             BackgroundColor="{DynamicResource Extreme}"
                                             Stroke="{DynamicResource QueryTextBorder}"
                                             StrokeThickness="1"
                                             StrokeShape="RoundRectangle 4">
                                         <StackLayout Spacing="0">
                                             <!-- Action row -->
-                                            <Grid ColumnDefinitions="*,*,*,*,Auto" Padding="4,2">
+                                            <Grid ColumnDefinitions="*,*,*,*,Auto" Padding="4,0">
                                                 <Button Grid.Column="0"
                                                         Text="{x:Static fonts:FontAwesomeSolid.Star}"
-                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="15"
+                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="13"
                                                         BackgroundColor="Transparent"
                                                         TextColor="{DynamicResource SecondaryTextColor}"
-                                                        HeightRequest="40"
+                                                        HeightRequest="32"
                                                         Command="{Binding BindingContext.Commands[SaveQuery], Source={x:Reference sessionPage}}"
                                                         CommandParameter="{Binding .}" />
                                                 <Button Grid.Column="1"
                                                         Text="{x:Static fonts:FontAwesomeSolid.Expand}"
-                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="15"
+                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="13"
                                                         BackgroundColor="Transparent"
                                                         IsEnabled="{Binding CanDisplayGraph}"
                                                         TextColor="{DynamicResource SecondaryTextColor}"
-                                                        HeightRequest="40"
+                                                        HeightRequest="32"
                                                         Command="{Binding BindingContext.Commands[OpenGraph], Source={x:Reference sessionPage}}"
                                                         CommandParameter="{Binding .}" />
                                                 <Button Grid.Column="2"
                                                         Text="{x:Static fonts:FontAwesomeSolid.Code}"
-                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="15"
+                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="13"
                                                         BackgroundColor="Transparent"
                                                         IsEnabled="{Binding Success}"
                                                         TextColor="{DynamicResource SecondaryTextColor}"
-                                                        HeightRequest="40"
+                                                        HeightRequest="32"
                                                         Command="{Binding BindingContext.Commands[OpenTable], Source={x:Reference sessionPage}}"
                                                         CommandParameter="{Binding .}" />
                                                 <Button Grid.Column="3"
                                                         Text="{x:Static fonts:FontAwesomeSolid.TrashAlt}"
-                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="15"
+                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="13"
                                                         BackgroundColor="Transparent"
                                                         TextColor="{DynamicResource SecondaryTextColor}"
-                                                        HeightRequest="40"
+                                                        HeightRequest="32"
                                                         Command="{Binding BindingContext.Commands[DeleteResult], Source={x:Reference sessionPage}}"
                                                         CommandParameter="{Binding .}" />
                                                 <Button Grid.Column="4"
                                                         Text="{x:Static fonts:FontAwesomeSolid.ChevronUp}"
-                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="12"
+                                                        FontFamily="{StaticResource FontAwesomeSolid}" FontSize="10"
                                                         BackgroundColor="Transparent"
                                                         TextColor="{DynamicResource SecondaryTextColor}"
-                                                        WidthRequest="40" HeightRequest="40"
+                                                        WidthRequest="32" HeightRequest="32"
                                                         Clicked="ToggleResultCollapse" />
                                             </Grid>
 
                                             <!-- Query label -->
                                             <Label Text="{Binding DisplayQuery}"
-                                                   Padding="12,0,12,8"
-                                                   FontSize="12"
+                                                   Padding="12,0,12,4"
+                                                   FontSize="11"
                                                    TextColor="{DynamicResource SecondaryTextColor}"
                                                    LineBreakMode="TailTruncation"
-                                                   MaxLines="2">
+                                                   MaxLines="1">
                                                 <Label.GestureRecognizers>
                                                     <TapGestureRecognizer
                                                         Command="{Binding BindingContext.Commands[LoadResultQuery], Source={x:Reference sessionPage}}"
@@ -219,26 +220,27 @@
                         </StackLayout>
                     </StackLayout>
 
-                    <!-- Empty hint (no results yet) -->
-                    <StackLayout IsVisible="{Binding IsEmpty}" HorizontalOptions="Center" Spacing="12" Padding="32,24">
-                        <Label Text="{x:Static fonts:FontAwesomeSolid.Database}"
-                               FontFamily="{StaticResource FontAwesomeSolid}"
-                               FontSize="48"
-                               TextColor="{DynamicResource SecondaryTextColor}"
-                               HorizontalOptions="Center" />
-                        <Label Text="No results yet"
-                               FontSize="18" FontAttributes="Bold"
-                               TextColor="{DynamicResource SecondaryTextColor}"
-                               HorizontalOptions="Center" />
-                        <Label Text="Write a query and tap play, or load a saved query above"
-                               FontSize="14"
-                               TextColor="{DynamicResource SecondaryTextColor}"
-                               HorizontalTextAlignment="Center"
-                               HorizontalOptions="Center" />
-                    </StackLayout>
 
                 </StackLayout>
             </ScrollView>
+
+            <!-- Empty hint (no results yet) — overlaid and vertically centered -->
+            <StackLayout Grid.Row="1" IsVisible="{Binding IsEmpty}" HorizontalOptions="Center" VerticalOptions="Center" Spacing="12" Padding="32,24">
+                <Label Text="{x:Static fonts:FontAwesomeSolid.Database}"
+                       FontFamily="{StaticResource FontAwesomeSolid}"
+                       FontSize="48"
+                       TextColor="{DynamicResource SecondaryTextColor}"
+                       HorizontalOptions="Center" />
+                <Label Text="No results yet"
+                       FontSize="18" FontAttributes="Bold"
+                       TextColor="{DynamicResource SecondaryTextColor}"
+                       HorizontalOptions="Center" />
+                <Label Text="Write a query and tap play, or load a saved query above"
+                       FontSize="14"
+                       TextColor="{DynamicResource SecondaryTextColor}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center" />
+            </StackLayout>
 
         </Grid>
     </ContentPage.Content>

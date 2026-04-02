@@ -76,12 +76,18 @@ namespace Xamarin.Neo4j.Pages
 
             var isDark = Application.Current.RequestedTheme == AppTheme.Dark;
             html = html.Replace("{{json}}", json);
-            html = html.Replace("{{backgroundColor}}", isDark ? "#1e1e1e" : "#ffffff");
-            html = html.Replace("{{textColor}}", isDark ? "#d4d4d4" : "#1a1a1a");
-            html = html.Replace("{{toolbarBg}}", isDark ? "#252526" : "#f5f5f5");
-            html = html.Replace("{{inputBg}}", isDark ? "#3c3c3c" : "#ffffff");
-            html = html.Replace("{{borderColor}}", isDark ? "#454545" : "#cccccc");
-            html = html.Replace("{{mutedColor}}", isDark ? "#808080" : "#8a8a8a");
+            html = html.Replace("{{backgroundColor}}", isDark ? "#0c0c0c" : "#f5f5f5");
+            html = html.Replace("{{textColor}}", isDark ? "#e2e2e2" : "#0c0c0c");
+            html = html.Replace("{{toolbarBg}}", isDark ? "#141414" : "#ffffff");
+            html = html.Replace("{{inputBg}}", isDark ? "#1a1a1a" : "#ffffff");
+            html = html.Replace("{{borderColor}}", isDark ? "#2a2a2a" : "#e0e0e0");
+            html = html.Replace("{{mutedColor}}", isDark ? "#868686" : "#868a92");
+            html = html.Replace("{{stringColor}}", isDark ? "#8BC34A" : "#2E7D32");
+            html = html.Replace("{{numberColor}}", isDark ? "#64B5F6" : "#1565C0");
+            html = html.Replace("{{boolColor}}", isDark ? "#FFB74D" : "#E65100");
+            html = html.Replace("{{nullColor}}", isDark ? "#868686" : "#868a92");
+            html = html.Replace("{{keyColor}}", isDark ? "#e2e2e2" : "#0c0c0c");
+            html = html.Replace("{{errorColor}}", isDark ? "#ff6b6b" : "#c62828");
             return html;
         }
     }

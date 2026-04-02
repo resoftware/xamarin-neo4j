@@ -3,9 +3,9 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
-:root{--bg:{{backgroundColor}};--fg:{{textColor}};--toolbar:{{toolbarBg}};--input:{{inputBg}};--border:{{borderColor}};--muted:{{mutedColor}}}
+:root{--bg:{{backgroundColor}};--fg:{{textColor}};--toolbar:{{toolbarBg}};--input:{{inputBg}};--border:{{borderColor}};--muted:{{mutedColor}};--str:{{stringColor}};--num:{{numberColor}};--bool:{{boolColor}};--nul:{{nullColor}};--key:{{keyColor}};--err:{{errorColor}}}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'Courier New',monospace;font-size:13px;background:var(--bg);color:var(--fg);overscroll-behavior:none}
+body{font-family:'Courier New',monospace;font-size:14px;line-height:1.5;background:var(--bg);color:var(--fg);overscroll-behavior:none}
 #toolbar{position:sticky;top:0;z-index:10;background:var(--toolbar);padding:8px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--border)}
 #toolbar input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--input);color:var(--fg);font-family:inherit;font-size:13px;outline:none;-webkit-appearance:none}
 #toolbar-row2{display:flex;gap:6px;align-items:center}
@@ -14,8 +14,8 @@ body{font-family:'Courier New',monospace;font-size:13px;background:var(--bg);col
 .tbtn:active{opacity:.7}
 #status{font-size:11px;color:var(--muted);padding:0 2px;min-height:15px}
 #output{padding:10px}
-.s{color:#4CAF50}.n{color:#64B5F6}.b{color:#FFB74D}.nl{color:#90A4AE}.k{color:#EF9A9A}.e{color:#EF5350}
-.br{color:var(--fg);opacity:.7}.cm{color:var(--fg);opacity:.4}
+.s{color:var(--str)}.n{color:var(--num)}.b{color:var(--bool)}.nl{color:var(--nul)}.k{color:var(--key);font-weight:600}.e{color:var(--err)}
+.br{color:var(--fg);opacity:.85}.cm{color:var(--fg);opacity:.5}
 /* Block-based tree nodes */
 .node,.knode{display:block}
 .nhd{display:block;cursor:default}
@@ -154,13 +154,19 @@ function count(v){
 
 function setTheme(isDark){
   const r=document.documentElement.style;
-  r.setProperty('--bg',isDark?'#1e1e1e':'#ffffff');
-  r.setProperty('--fg',isDark?'#d4d4d4':'#1a1a1a');
-  r.setProperty('--toolbar',isDark?'#252526':'#f5f5f5');
-  r.setProperty('--input',isDark?'#3c3c3c':'#ffffff');
-  r.setProperty('--border',isDark?'#454545':'#cccccc');
-  r.setProperty('--muted',isDark?'#808080':'#8a8a8a');
-  document.body.style.background=isDark?'#1e1e1e':'#ffffff';
+  r.setProperty('--bg',isDark?'#0c0c0c':'#f5f5f5');
+  r.setProperty('--fg',isDark?'#e2e2e2':'#0c0c0c');
+  r.setProperty('--toolbar',isDark?'#141414':'#ffffff');
+  r.setProperty('--input',isDark?'#1a1a1a':'#ffffff');
+  r.setProperty('--border',isDark?'#2a2a2a':'#e0e0e0');
+  r.setProperty('--muted',isDark?'#868686':'#868a92');
+  r.setProperty('--str',isDark?'#8BC34A':'#2E7D32');
+  r.setProperty('--num',isDark?'#64B5F6':'#1565C0');
+  r.setProperty('--bool',isDark?'#FFB74D':'#E65100');
+  r.setProperty('--nul',isDark?'#868686':'#868a92');
+  r.setProperty('--key',isDark?'#e2e2e2':'#0c0c0c');
+  r.setProperty('--err',isDark?'#ff6b6b':'#c62828');
+  document.body.style.background=isDark?'#0c0c0c':'#f5f5f5';
 }
 
 document.getElementById('srch').addEventListener('input',function(){srch=this.value.trim().toLowerCase();render()});

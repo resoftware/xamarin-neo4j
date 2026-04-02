@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
+using Microsoft.Maui.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui;
 using Xamarin.Neo4j.Managers;
@@ -42,8 +43,28 @@ namespace Xamarin.Neo4j.Controls
             graphView.Source = new HtmlWebViewSource { Html = QueryResult?.NeovisHtml };
         }
 
+        private double _originalHeight;
+
         private async void OnGraphViewNavigating(object sender, WebNavigatingEventArgs e)
         {
+            // Panel open/close — expand WebView so panel has room
+            if (e.Url.Contains("panelopen"))
+            {
+                e.Cancel = true;
+                _originalHeight = graphView.HeightRequest;
+                var screenService = IPlatformApplication.Current.Services.GetRequiredService<Services.Interfaces.IScreenSizeService>();
+                var screenHeight = screenService.GetScreenHeight();
+                graphView.HeightRequest = Math.Max(_originalHeight, screenHeight * 0.7);
+                return;
+            }
+            if (e.Url.Contains("panelclose"))
+            {
+                e.Cancel = true;
+                if (_originalHeight > 0)
+                    graphView.HeightRequest = _originalHeight;
+                return;
+            }
+
             if (!e.Url.Contains("expand") || !e.Url.Contains("nodeId")) return;
 
             e.Cancel = true;
@@ -110,6 +131,13 @@ namespace Xamarin.Neo4j.Controls
                 html = html.Replace("{{edges}}", edgesJson);
                 html = html.Replace("{{backgroundColor}}", isDark ? "#292C31" : "#FFFFFF");
                 html = html.Replace("{{textColor}}", isDark ? "#FFFFFF" : "#000000");
+                html = html.Replace("{{panelBg}}", isDark ? "#141414" : "#ffffff");
+                html = html.Replace("{{borderColor}}", isDark ? "#2a2a2a" : "#e0e0e0");
+                html = html.Replace("{{mutedColor}}", isDark ? "#868686" : "#868a92");
+                html = html.Replace("{{accentColor}}", isDark ? "#e2e2e2" : "#0c0c0c");
+                html = html.Replace("{{primaryColor}}", isDark ? "#e2e2e2" : "#0c0c0c");
+                html = html.Replace("{{errorColor}}", isDark ? "#ff6b6b" : "#c62828");
+                html = html.Replace("{{autoZoom}}", Preferences.Default.Get("auto_zoom", true) ? "true" : "false");
 
                 QueryResult.NeovisHtml = html;
             }

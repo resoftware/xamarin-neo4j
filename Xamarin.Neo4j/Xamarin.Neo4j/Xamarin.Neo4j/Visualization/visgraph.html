@@ -8,36 +8,269 @@
             html, body { width: 100%; height: 100%; overflow: hidden; background: {{backgroundColor}}; }
             canvas { display: block; position: absolute; top: 0; left: 0; }
 
-            #popup {
+            /* ── Slide-up detail panel ── */
+            #panel-backdrop {
                 display: none;
                 position: fixed;
-                bottom: 24px;
-                left: 16px;
-                right: 16px;
-                background: rgba(20, 20, 30, 0.95);
-                color: #fff;
+                inset: 0;
+                z-index: 90;
+            }
+            #panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: {{panelBg}};
+                border-top: 1px solid {{borderColor}};
+                border-radius: 16px 16px 0 0;
+                height: 55%;
+                transform: translateY(100%);
+                transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+                z-index: 100;
+                display: flex;
+                flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                overflow: hidden;
+                will-change: transform, height;
+            }
+            #panel.open { transform: translateY(0); }
+            #panel.dragging { transition: none !important; }
+
+            /* Drag handle */
+            .panel-handle {
+                width: 36px;
+                height: 5px;
+                border-radius: 3px;
+                background: {{mutedColor}};
+                opacity: 0.4;
+                margin: 10px auto 0;
+                flex-shrink: 0;
+            }
+            .panel-handle-zone {
+                padding: 6px 0 2px;
+                cursor: grab;
+                flex-shrink: 0;
+                touch-action: none;
+            }
+
+            /* Action buttons row */
+            .panel-actions {
+                display: flex;
+                gap: 0;
+                padding: 8px 12px 4px;
+                flex-shrink: 0;
+                border-bottom: 1px solid {{borderColor}};
+            }
+            .panel-actions button {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 3px;
+                padding: 8px 4px;
+                border: none;
+                background: transparent;
+                color: {{mutedColor}};
+                font-size: 10px;
+                font-family: inherit;
+                cursor: pointer;
+                border-radius: 8px;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .panel-actions button:active {
+                background: {{borderColor}};
+            }
+            .panel-actions button svg {
+                width: 20px;
+                height: 20px;
+                fill: {{accentColor}};
+            }
+            .panel-actions button.destructive svg { fill: {{errorColor}}; }
+
+            /* Label header */
+            .panel-label {
+                padding: 12px 16px 4px;
+                flex-shrink: 0;
+            }
+            .panel-label .node-badge {
+                display: inline-block;
+                padding: 3px 10px;
                 border-radius: 12px;
-                padding: 14px 16px;
+                font-size: 13px;
+                font-weight: 700;
+                color: #fff;
+            }
+            .panel-label .node-id {
+                font-size: 11px;
+                color: {{mutedColor}};
+                margin-left: 8px;
+            }
+            .panel-label .edge-type {
+                font-size: 15px;
+                font-weight: 700;
+                color: {{primaryColor}};
+            }
+
+            /* Scrollable properties */
+            .panel-props {
+                overflow-y: auto;
+                padding: 8px 16px 24px;
+                -webkit-overflow-scrolling: touch;
+                flex: 1;
+            }
+            .panel-props table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .panel-props td {
+                padding: 6px 0;
+                font-size: 13px;
+                line-height: 1.4;
+                vertical-align: top;
+                border-bottom: 1px solid {{borderColor}};
+            }
+            .panel-props td.pk {
+                color: {{mutedColor}};
+                font-weight: 600;
+                white-space: nowrap;
+                padding-right: 12px;
+                width: 1%;
+            }
+            .panel-props td.pv {
+                color: {{primaryColor}};
+                word-break: break-word;
+            }
+            .panel-props tr:last-child td { border-bottom: none; }
+            .panel-props .no-props {
+                color: {{mutedColor}};
+                font-size: 13px;
+                font-style: italic;
+            }
+
+            /* JSON view */
+            .json-view-wrapper {
+                position: relative;
+            }
+            .json-view-wrapper pre {
+                background: {{borderColor}};
+                color: {{primaryColor}};
+                font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.5;
+                padding: 12px;
+                border-radius: 8px;
+                overflow: auto;
+                max-height: 40vh;
+                white-space: pre-wrap;
+                word-break: break-word;
+                margin: 0;
+            }
+            .json-copy-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 28px;
+                height: 28px;
+                border: none;
+                background: {{panelBg}};
+                border-radius: 6px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0.8;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .json-copy-btn:active { opacity: 1; }
+            .json-copy-btn svg {
+                width: 16px;
+                height: 16px;
+                fill: {{accentColor}};
+            }
+
+            /* Relations list */
+            .relations-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .relations-list li {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 0;
+                border-bottom: 1px solid {{borderColor}};
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            .relations-list li:last-child { border-bottom: none; }
+            .rel-type {
+                font-weight: 600;
+                color: {{accentColor}};
+                font-size: 11px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                background: {{borderColor}};
+                white-space: nowrap;
+            }
+            .rel-arrow {
+                color: {{mutedColor}};
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+            .rel-node {
+                color: {{primaryColor}};
+                font-weight: 500;
+                word-break: break-word;
+            }
+            .rel-empty {
+                color: {{mutedColor}};
+                font-size: 13px;
+                font-style: italic;
+            }
+
+            /* Toast notification */
+            #toast {
+                position: fixed;
+                bottom: 80px;
+                left: 50%;
+                transform: translateX(-50%) translateY(20px);
+                background: {{panelBg}};
+                color: {{primaryColor}};
+                border: 1px solid {{borderColor}};
+                padding: 8px 16px;
+                border-radius: 8px;
                 font-family: -apple-system, sans-serif;
                 font-size: 13px;
-                line-height: 1.5;
-                max-height: 40%;
-                overflow-y: auto;
-                z-index: 100;
+                opacity: 0;
+                transition: opacity 0.2s, transform 0.2s;
+                z-index: 200;
+                pointer-events: none;
             }
-            #popup .lbl {
-                font-size: 15px;
-                font-weight: 600;
-                margin-bottom: 6px;
-                color: #7EC8E3;
+            #toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
             }
-            #popup .prop { color: #ccc; }
-            #popup .prop b { color: #fff; }
         </style>
     </head>
     <body>
         <canvas id="c"></canvas>
-        <div id="popup"></div>
+
+        <!-- Backdrop to catch taps outside panel -->
+        <div id="panel-backdrop"></div>
+
+        <!-- Slide-up detail panel -->
+        <div id="panel">
+            <div class="panel-handle-zone" id="panel-handle-zone">
+                <div class="panel-handle"></div>
+            </div>
+            <div class="panel-actions" id="panel-actions"></div>
+            <div class="panel-label" id="panel-label"></div>
+            <div class="panel-props" id="panel-props"></div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"></div>
 
         <script>
         (function () {
@@ -51,7 +284,12 @@
 
             var canvas = document.getElementById('c');
             var ctx    = canvas.getContext('2d');
-            var popup  = document.getElementById('popup');
+            var panel  = document.getElementById('panel');
+            var panelBackdrop = document.getElementById('panel-backdrop');
+            var panelActions  = document.getElementById('panel-actions');
+            var panelLabel    = document.getElementById('panel-label');
+            var panelProps    = document.getElementById('panel-props');
+            var panelHandleZone = document.getElementById('panel-handle-zone');
             var W = 0, H = 0, dpr = window.devicePixelRatio || 1;
 
             // ---- node/edge state ----
@@ -134,8 +372,6 @@
                 edges.forEach(function (e) {
                     a = nodeById[e.from]; b = nodeById[e.to];
                     if (!a || !b) return;
-                    // leaf-to-hub: short spring (leaf stays close as petal)
-                    // hub-to-hub: long spring (clusters separate)
                     var len;
                     if (a.isHub && b.isHub) {
                         len = HUB_SPRING;
@@ -190,6 +426,35 @@
             // ---- camera (pan + zoom, initial zoom based on node count) ----
             var initialZoom = N <= 10 ? 1 : Math.max(0.05, 1 / Math.sqrt(N / 10));
             var panX = 0, panY = 0, zoom = initialZoom;
+            var autoZoomEnabled = {{autoZoom}};
+
+            // Smoothly animate camera to center on a node
+            function zoomToNode(n, targetZoom, delay) {
+                if (!autoZoomEnabled) return;
+                function doZoom() {
+                    targetZoom = targetZoom || Math.max(zoom, 1.2);
+                    var startPanX = panX, startPanY = panY, startZoom = zoom;
+                    // If panel is open, center in the visible area above the panel
+                    var panelH = panelOpen ? (panel.offsetHeight || H * 0.55) : 0;
+                    var visibleCenterY = (H - panelH) / 2;
+                    var endPanX = W / 2 - n.x * targetZoom;
+                    var endPanY = visibleCenterY - n.y * targetZoom;
+                    var duration = 400, startTime = Date.now();
+                    function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+                    function animate() {
+                        var t = Math.min(1, (Date.now() - startTime) / duration);
+                        var p = ease(t);
+                        panX = startPanX + (endPanX - startPanX) * p;
+                        panY = startPanY + (endPanY - startPanY) * p;
+                        zoom = startZoom + (targetZoom - startZoom) * p;
+                        draw();
+                        if (t < 1) requestAnimationFrame(animate);
+                    }
+                    requestAnimationFrame(animate);
+                }
+                if (delay) setTimeout(doZoom, delay);
+                else doZoom();
+            }
 
             // screen coords -> world coords
             function toWorld(sx, sy) {
@@ -257,7 +522,7 @@
                         ctx.stroke();
                     }
 
-                    var lbl = n.label.length > 10 ? n.label.slice(0, 9) + '…' : n.label;
+                    var lbl = n.label.length > 10 ? n.label.slice(0, 9) + '\u2026' : n.label;
                     ctx.fillStyle = '#fff';
                     ctx.font = 'bold 11px -apple-system, sans-serif';
                     ctx.textAlign = 'center';
@@ -267,50 +532,389 @@
                 ctx.restore();
             }
 
-            // ---- popup ----
-            function buildPropsHtml(title) {
-                var html = '';
-                if (title) {
-                    title.split(', ').forEach(function (pair) {
-                        var idx = pair.indexOf(': ');
-                        if (idx > -1) {
-                            html += '<div class="prop"><b>' + escHtml(pair.slice(0, idx)) + ':</b> ' + escHtml(pair.slice(idx + 2)) + '</div>';
-                        } else {
-                            html += '<div class="prop">' + escHtml(pair) + '</div>';
-                        }
+            // ---- panel ----
+            var panelOpen = false;
+            var panelViewState = 'props'; // 'props', 'json', 'relations'
+            var panelCurrentItem = null;
+            var panelCurrentType = null; // 'node' or 'edge'
+
+            // SVG icon paths
+            var ICONS = {
+                copy: '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>',
+                json: '<svg viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 01-2 2 2 2 0 012 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 00-2-2H0v-2h1a2 2 0 002-2V5a2 2 0 012-2m14 0a2 2 0 012 2v4a2 2 0 002 2h1v2h-1a2 2 0 00-2 2v4a2 2 0 01-2 2h-2v-2h2v-5a2 2 0 012-2 2 2 0 01-2-2V5h-2V3h2z"/></svg>',
+                expand: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7v-2h4V7h2v4h4v2h-4v4h-2z"/></svg>',
+                collapse: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>',
+                close: '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+                props: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>'
+            };
+
+            function parseProps(title) {
+                var props = [];
+                if (!title) return props;
+                title.split(', ').forEach(function (pair) {
+                    var idx = pair.indexOf(': ');
+                    if (idx > -1) {
+                        props.push({ key: pair.slice(0, idx), value: pair.slice(idx + 2) });
+                    } else if (pair.trim()) {
+                        props.push({ key: '', value: pair });
+                    }
+                });
+                return props;
+            }
+
+            function propsToText(label, props) {
+                var lines = [label];
+                props.forEach(function (p) {
+                    lines.push(p.key ? p.key + ': ' + p.value : p.value);
+                });
+                return lines.join('\n');
+            }
+
+            function propsToJson(n) {
+                var obj = { id: n.id, label: n.label, properties: {} };
+                parseProps(n.title).forEach(function (p) {
+                    if (p.key) obj.properties[p.key] = p.value;
+                });
+                return JSON.stringify(obj, null, 2);
+            }
+
+            function edgePropsToJson(e) {
+                var obj = { type: e.label, from: e.from, to: e.to, properties: {} };
+                parseProps(e.title).forEach(function (p) {
+                    if (p.key) obj.properties[p.key] = p.value;
+                });
+                return JSON.stringify(obj, null, 2);
+            }
+
+            function showToast(msg) {
+                var t = document.getElementById('toast');
+                t.textContent = msg;
+                t.classList.add('show');
+                setTimeout(function () { t.classList.remove('show'); }, 1500);
+            }
+
+            function copyToClipboard(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        showToast('Copied to clipboard');
                     });
                 } else {
-                    html += '<div class="prop">No properties</div>';
+                    // Fallback for WebView
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('Copied to clipboard');
                 }
+            }
+
+            function getRelationsForNode(nodeId) {
+                var rels = [];
+                edges.forEach(function (e) {
+                    if (e.from === nodeId) {
+                        var targetNode = nodeById[e.to];
+                        rels.push({
+                            type: e.label || 'RELATED',
+                            direction: 'out',
+                            nodeLabel: targetNode ? targetNode.label : String(e.to),
+                            nodeId: e.to
+                        });
+                    }
+                    if (e.to === nodeId) {
+                        var sourceNode = nodeById[e.from];
+                        rels.push({
+                            type: e.label || 'RELATED',
+                            direction: 'in',
+                            nodeLabel: sourceNode ? sourceNode.label : String(e.from),
+                            nodeId: e.from
+                        });
+                    }
+                });
+                return rels;
+            }
+
+            function buildRelationsHtml(nodeId) {
+                var rels = getRelationsForNode(nodeId);
+                if (rels.length === 0) {
+                    return '<div class="rel-empty">Loading relations\u2026</div>';
+                }
+                var html = '<ul class="relations-list">';
+                rels.forEach(function (r) {
+                    var arrow = r.direction === 'out' ? '\u2192' : '\u2190';
+                    html += '<li>';
+                    html += '<span class="rel-type">' + escHtml(r.type) + '</span>';
+                    html += '<span class="rel-arrow">' + arrow + '</span>';
+                    html += '<span class="rel-node">' + escHtml(r.nodeLabel) + '</span>';
+                    html += '</li>';
+                });
+                html += '</ul>';
                 return html;
             }
 
-            function showPopup(n) {
+            function buildJsonViewHtml(jsonStr) {
+                return '<div class="json-view-wrapper">' +
+                    '<button class="json-copy-btn" onclick="window._panelCopyJsonClipboard()">' + ICONS.copy + '</button>' +
+                    '<pre>' + escHtml(jsonStr) + '</pre>' +
+                    '</div>';
+            }
+
+            function buildActionsForView(type, item, viewState) {
+                var html = '';
+
+                // Copy as text
+                html += '<button onclick="window._panelCopyText()">' + ICONS.copy + '<span>Copy</span></button>';
+
+                // JSON / Properties toggle
+                if (viewState === 'json') {
+                    html += '<button onclick="window._panelShowProps()">' + ICONS.props + '<span>Properties</span></button>';
+                } else {
+                    html += '<button onclick="window._panelShowJson()">' + ICONS.json + '<span>JSON</span></button>';
+                }
+
+                if (type === 'node') {
+                    if (viewState === 'relations') {
+                        // Show Properties button to go back
+                        html += '<button onclick="window._panelShowProps()">' + ICONS.props + '<span>Properties</span></button>';
+                    } else {
+                        // Expand / collapse relations
+                        var isExpanded = !!expandedBy[item.id];
+                        if (isExpanded) {
+                            html += '<button onclick="window._panelCollapse()">' + ICONS.collapse + '<span>Collapse</span></button>';
+                        } else {
+                            html += '<button onclick="window._panelExpand()">' + ICONS.expand + '<span>Relations</span></button>';
+                        }
+                    }
+                }
+
+                // Close
+                html += '<button class="destructive" onclick="window._panelClose()">' + ICONS.close + '<span>Close</span></button>';
+
+                return html;
+            }
+
+            function buildPropsHtml(title) {
+                var props = parseProps(title);
+                if (!props.length) return '<div class="no-props">No properties</div>';
+                var html = '<table>';
+                props.forEach(function (p) {
+                    html += '<tr><td class="pk">' + escHtml(p.key) + '</td><td class="pv">' + escHtml(p.value) + '</td></tr>';
+                });
+                html += '</table>';
+                return html;
+            }
+
+            function updatePanelContent() {
+                if (!panelCurrentItem) return;
+                var item = panelCurrentItem;
+                var type = panelCurrentType;
+
+                if (panelViewState === 'json') {
+                    var jsonStr = type === 'node' ? propsToJson(item) : edgePropsToJson(item);
+                    panelProps.innerHTML = buildJsonViewHtml(jsonStr);
+                    window._panelCopyJsonClipboard = function () {
+                        copyToClipboard(jsonStr);
+                    };
+                } else if (panelViewState === 'relations' && type === 'node') {
+                    panelProps.innerHTML = buildRelationsHtml(item.id);
+                } else {
+                    panelProps.innerHTML = buildPropsHtml(item.title);
+                }
+
+                panelActions.innerHTML = buildActionsForView(type, item, panelViewState);
+                wireUpActions(type, item);
+            }
+
+            function wireUpActions(type, item) {
+                window._panelCopyText = function () {
+                    var label = type === 'node' ? item.label : (item.label || 'Relationship');
+                    copyToClipboard(propsToText(label, parseProps(item.title)));
+                };
+                window._panelShowJson = function () {
+                    panelViewState = 'json';
+                    updatePanelContent();
+                };
+                window._panelShowProps = function () {
+                    panelViewState = 'props';
+                    updatePanelContent();
+                };
+                window._panelClose = function () { hidePanel(); };
+
+                if (type === 'node') {
+                    window._panelExpand = function () {
+                        // Trigger expand
+                        toggleExpandCollapse(item);
+                        // Switch to relations view
+                        panelViewState = 'relations';
+                        updatePanelContent();
+                        // After expand completes, the addGraphData callback will refresh
+                        setTimeout(function () {
+                            if (panelOpen && panelViewState === 'relations') {
+                                updatePanelContent();
+                            }
+                        }, 500);
+                    };
+                    window._panelCollapse = function () {
+                        toggleExpandCollapse(item);
+                        setTimeout(function () {
+                            updatePanelContent();
+                        }, 300);
+                    };
+                }
+            }
+
+            function showNodePanel(n) {
                 selected = n;
                 selectedEdge = null;
-                var html = '<div class="lbl">' + escHtml(n.label) + '</div>';
-                html += buildPropsHtml(n.title);
-                popup.innerHTML = html;
-                popup.style.display = 'block';
+                panelCurrentItem = n;
+                panelCurrentType = 'node';
+                panelViewState = 'props';
+
+                // Label header
+                panelLabel.innerHTML = '<span class="node-badge" style="background:' + n.color + '">' + escHtml(n.label) + '</span>' +
+                    '<span class="node-id">ID: ' + n.id + '</span>';
+
+                updatePanelContent();
+                openPanel();
+                zoomToNode(n);
                 draw();
             }
 
-            function showEdgePopup(e) {
+            function showEdgePanel(e) {
                 selectedEdge = e;
                 selected = null;
-                var html = '<div class="lbl" style="color:#E8A838">' + escHtml(e.label || 'Relationship') + '</div>';
-                html += buildPropsHtml(e.title);
-                popup.innerHTML = html;
-                popup.style.display = 'block';
+                panelCurrentItem = e;
+                panelCurrentType = 'edge';
+                panelViewState = 'props';
+
+                // Label
+                panelLabel.innerHTML = '<span class="edge-type">' + escHtml(e.label || 'Relationship') + '</span>' +
+                    '<span class="node-id" style="margin-left:8px">' + e.from + ' \u2192 ' + e.to + '</span>';
+
+                updatePanelContent();
+                openPanel();
                 draw();
             }
 
-            function hidePopup() {
+            function notifyApp(url) {
+                var f = document.createElement('iframe');
+                f.style.display = 'none';
+                f.src = url;
+                document.body.appendChild(f);
+                setTimeout(function () { document.body.removeChild(f); }, 200);
+            }
+
+            function openPanel() {
+                panelOpen = true;
+                panel.style.height = '55%';
+                panelBackdrop.style.display = 'block';
+                panel.offsetHeight;
+                panel.classList.add('open');
+                notifyApp('app://panelopen');
+            }
+
+            function hidePanel() {
                 selected = null;
                 selectedEdge = null;
-                popup.style.display = 'none';
+                panelOpen = false;
+                panelCurrentItem = null;
+                panelCurrentType = null;
+                panelViewState = 'props';
+                panel.classList.remove('open');
+                panel.style.transform = '';
+                panel.style.height = '';
+                panelBackdrop.style.display = 'none';
                 draw();
+                notifyApp('app://panelclose');
             }
+
+            panelBackdrop.addEventListener('click', function (e) { e.stopPropagation(); hidePanel(); });
+            panelBackdrop.addEventListener('touchend', function (e) { e.stopPropagation(); hidePanel(); });
+
+            // ---- panel drag (up to expand, down to dismiss) ----
+            var panelDragStartY = 0;
+            var panelDragDeltaY = 0;
+            var panelIsDragging = false;
+            var panelStartHeight = 0;
+            var PANEL_MIN_H = 120;
+
+            function panelDragStart(clientY, e) {
+                if (!panelOpen) return;
+                panelDragStartY = clientY;
+                panelDragDeltaY = 0;
+                panelStartHeight = panel.offsetHeight;
+                panelIsDragging = true;
+                panel.classList.add('dragging');
+                if (e) e.stopPropagation();
+            }
+
+            panelHandleZone.addEventListener('touchstart', function (e) {
+                panelDragStart(e.touches[0].clientY, e);
+            }, { passive: false });
+
+            panelHandleZone.addEventListener('mousedown', function (e) {
+                panelDragStart(e.clientY, e);
+            });
+
+            function panelDragMove(clientY) {
+                if (!panelIsDragging) return;
+                var dy = clientY - panelDragStartY;
+                panelDragDeltaY = dy;
+                if (dy >= 0) {
+                    // Dragging down — translate panel down (toward dismiss)
+                    panel.style.height = panelStartHeight + 'px';
+                    panel.style.transform = 'translateY(' + dy + 'px)';
+                } else {
+                    // Dragging up — expand panel height
+                    var newH = Math.min(panelStartHeight - dy, H * 0.92);
+                    newH = Math.max(newH, PANEL_MIN_H);
+                    panel.style.height = newH + 'px';
+                    panel.style.transform = 'translateY(0)';
+                }
+            }
+
+            function panelDragEnd() {
+                if (!panelIsDragging) return;
+                panelIsDragging = false;
+                panel.classList.remove('dragging');
+                if (panelDragDeltaY > 80) {
+                    hidePanel();
+                } else {
+                    // Keep the new height if dragged up, snap translate back
+                    panel.style.transform = '';
+                }
+            }
+
+            document.addEventListener('touchmove', function (e) {
+                if (panelIsDragging) {
+                    panelDragMove(e.touches[0].clientY);
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', function () {
+                if (panelIsDragging) panelDragEnd();
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (panelIsDragging) {
+                    panelDragMove(e.clientY);
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('mouseup', function () {
+                if (panelIsDragging) panelDragEnd();
+            });
+
+            document.addEventListener('mouseup', function (e) {
+                if (panelIsDragging) {
+                    panelDragEnd();
+                }
+            });
 
             function escHtml(s) {
                 return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -346,19 +950,13 @@
             }
 
             function expandNode(n) {
-                var f = document.createElement('iframe');
-                f.style.display = 'none';
-                f.src = 'app://expand?nodeId=' + n.id;
-                document.body.appendChild(f);
-                setTimeout(function () { document.body.removeChild(f); }, 200);
+                notifyApp('app://expand?nodeId=' + n.id);
             }
 
             function collapseNode(n) {
                 var childIds = expandedBy[n.id];
                 if (!childIds) return;
 
-                // only remove children that aren't initial nodes and aren't
-                // also owned by another still-expanded node
                 var otherOwned = {};
                 Object.keys(expandedBy).forEach(function (ownerId) {
                     if (ownerId == n.id) return;
@@ -370,7 +968,6 @@
                     if (!initialNodeIds[cid] && !otherOwned[cid]) toRemove[cid] = true;
                 });
 
-                // also collapse any nodes that were expanded from nodes we're about to remove
                 Object.keys(toRemove).forEach(function (rid) {
                     if (expandedBy[rid]) {
                         expandedBy[rid].forEach(function (cid) {
@@ -380,19 +977,16 @@
                     }
                 });
 
-                // remove edges connected to removed nodes
                 edges = edges.filter(function (e) {
                     return !toRemove[e.from] && !toRemove[e.to];
                 });
 
-                // remove nodes
                 nodes = nodes.filter(function (nd) { return !toRemove[nd.id]; });
                 Object.keys(toRemove).forEach(function (rid) { delete nodeById[rid]; });
 
                 delete expandedBy[n.id];
 
-                // hide popup if the selected node was removed
-                if (selected && toRemove[selected.id]) hidePopup();
+                if (selected && toRemove[selected.id]) hidePanel();
 
                 recomputeDegrees();
                 resumeLoop();
@@ -407,7 +1001,7 @@
 
                 newNodes.forEach(function (d) {
                     if (nodeById[d.id]) {
-                        addedIds.push(d.id); // track even existing ones as children
+                        addedIds.push(d.id);
                         return;
                     }
                     var angle = Math.random() * 2 * Math.PI;
@@ -429,13 +1023,22 @@
                     });
                     if (exists) return;
                     if (!nodeById[d.from] || !nodeById[d.to]) return;
-                    edges.push({ from: d.from, to: d.to, label: d.label || '' });
+                    edges.push({ from: d.from, to: d.to, label: d.label || '', title: d.title || '' });
                 });
 
                 expandedBy[originId] = addedIds;
 
                 recomputeDegrees();
                 resumeLoop();
+
+                // Zoom to the expanded node
+                var origin = nodeById[originId];
+                if (origin) zoomToNode(origin, null, 800);
+
+                // Update panel if still showing this node
+                if (selected && selected.id === originId && panelOpen) {
+                    updatePanelContent();
+                }
             };
 
             // ---- interaction handling (touch + mouse/pointer) ----
@@ -444,21 +1047,16 @@
             function notifyInteraction() {
                 if (interacted) return;
                 interacted = true;
-                var f = document.createElement('iframe');
-                f.style.display = 'none';
-                f.src = 'app://interaction';
-                document.body.appendChild(f);
-                setTimeout(function () { document.body.removeChild(f); }, 200);
+                notifyApp('app://interaction');
             }
 
             function edgeAt(sx, sy) {
                 var w = toWorld(sx, sy);
-                var threshold = 12 / zoom; // tap tolerance in world units
+                var threshold = 12 / zoom;
                 var best = null, bestDist = threshold;
                 edges.forEach(function (e) {
                     var a = nodeById[e.from], b = nodeById[e.to];
                     if (!a || !b) return;
-                    // point-to-segment distance
                     var dx = b.x - a.x, dy = b.y - a.y;
                     var lenSq = dx * dx + dy * dy;
                     if (lenSq === 0) return;
@@ -487,6 +1085,7 @@
 
             function handleStart(e) {
                 if (e.touches) e.preventDefault();
+                if (panelOpen) return; // don't start drag while panel is open
                 notifyInteraction();
                 var p = coordFromEvent(e);
                 ptrStartX = ptrEndX = p.x;
@@ -530,17 +1129,16 @@
                         toggleExpandCollapse(hit);
                     } else if (hit) {
                         lastTapNode = hit; lastTapTime = now;
-                        if (hit === selected) hidePopup();
-                        else showPopup(hit);
+                        if (hit === selected && panelOpen) hidePanel();
+                        else showNodePanel(hit);
                     } else {
                         lastTapNode = null; lastTapTime = 0;
-                        // no node hit — check if an edge was tapped
                         var hitEdge = edgeAt(ptrStartX, ptrStartY);
                         if (hitEdge) {
-                            if (hitEdge === selectedEdge) hidePopup();
-                            else showEdgePopup(hitEdge);
+                            if (hitEdge === selectedEdge && panelOpen) hidePanel();
+                            else showEdgePanel(hitEdge);
                         } else {
-                            hidePopup();
+                            if (panelOpen) hidePanel();
                         }
                     }
                 }
@@ -566,10 +1164,6 @@
             canvas.addEventListener('mousemove', handleMove);
             canvas.addEventListener('mouseup',   handleEnd);
 
-            // dismiss popup when tapping/clicking it
-            popup.addEventListener('touchend', function (e) { e.stopPropagation(); hidePopup(); });
-            popup.addEventListener('click',    function (e) { e.stopPropagation(); hidePopup(); });
-
             // ---- zoom: scroll wheel ----
             canvas.addEventListener('wheel', function (e) {
                 e.preventDefault();
@@ -577,7 +1171,6 @@
                 var mx = e.clientX - rect.left, my = e.clientY - rect.top;
                 var factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
                 var newZoom = Math.min(Math.max(zoom * factor, 0.1), 10);
-                // zoom toward mouse position
                 panX = mx - (mx - panX) * (newZoom / zoom);
                 panY = my - (my - panY) * (newZoom / zoom);
                 zoom = newZoom;
@@ -638,14 +1231,12 @@
 
             function init() {
                 resize();
-                // WebView may not have layout yet — retry until we get real dimensions
                 if ((W <= 1 || H <= 1) && initRetries < 20) {
                     initRetries++;
                     setTimeout(init, 50);
                     return;
                 }
                 placeInitial();
-                // center the camera on the graph with the pre-computed zoom
                 panX = W / 2 - (W / 2) * zoom;
                 panY = H / 2 - (H / 2) * zoom;
                 loop();
@@ -656,7 +1247,6 @@
                 draw();
             });
 
-            // Use rAF to ensure the browser has laid out the canvas before we read its size
             requestAnimationFrame(function () {
                 requestAnimationFrame(init);
             });

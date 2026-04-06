@@ -67,4 +67,5 @@ jobs:
           releaseFiles: Xamarin.Neo4j/Xamarin.Neo4j/Xamarin.Neo4j.Android/bin/Release/net10.0-android/publish/*-Signed.aab
           track: internal
           status: completed
+          changesNotSentForReview: true
           whatsNewDirectory: Xamarin.Neo4j/distribution/whatsnew
